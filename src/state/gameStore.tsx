@@ -12,9 +12,38 @@ import {
   LOCATIONS,
   MALE_PIWKO_ID,
   UNLOCK_ORDER,
+  evaluatePourLevel,
   getSecretUnderBarConfig,
+  isShotPourLocation,
   type Location,
+  type PourResult,
 } from "@/data/gameData";
+
+export type { PourResult };
+
+const POUR_TICK_MS = 50;
+
+function emptyPourState() {
+  return {
+    pourLevel: 0,
+    pourIsPouring: false,
+    pourEvaluated: false,
+    pourResult: null as PourResult | null,
+  };
+}
+
+function evaluatePourState(s: GameState, level: number, loc: Location) {
+  const targetMin = loc.targetMin ?? 70;
+  const targetMax = loc.targetMax ?? 85;
+  const pourResult = evaluatePourLevel(level, targetMin, targetMax);
+  return {
+    ...emptyPourState(),
+    pourLevel: level,
+    pourEvaluated: true,
+    pourResult,
+    pourIsPouring: false,
+  };
+}
 
 export type SecretUnderBarPhase = "offer" | "entry" | "reveal";
 
@@ -52,6 +81,10 @@ export interface GameState {
   secretUnderBarPhase: SecretUnderBarPhase | null;
   secretUnderBarShotsConfirmed: number;
   secretShotPulse: number;
+  pourLevel: number;
+  pourIsPouring: boolean;
+  pourEvaluated: boolean;
+  pourResult: PourResult | null;
 }
 
 const STORAGE_KEY = "bachelor-quest-state-v3";
@@ -82,6 +115,7 @@ function initialState(): GameState {
     secretUnderBarPhase: null,
     secretUnderBarShotsConfirmed: 0,
     secretShotPulse: 0,
+    ...emptyPourState(),
   };
 }
 
@@ -129,6 +163,9 @@ interface Ctx {
   secretConfirmShot: () => void;
   secretEnterUnderBar: () => void;
   secretFinishReveal: () => void;
+  startPouring: () => void;
+  stopPouring: () => void;
+  acknowledgePourResult: () => void;
 }
 
 const GameCtx = createContext<Ctx | null>(null);
@@ -185,6 +222,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         riskPhase: loc.type === "risk" ? "intro" : null,
         riskCountdownStart: null,
         riskQuestionStart: null,
+        ...emptyPourState(),
         status: { kind: "questActive", message: `Quest: ${loc.name}` },
       }));
     },
@@ -195,7 +233,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
     (
       success: boolean,
       loc: Location,
-      opts?: { penaltyShots?: number; teamShotOnSuccess?: boolean },
+      opts?: {
+        penaltyShots?: number;
+        teamShotOnSuccess?: boolean;
+        statusMessage?: string;
+      },
     ) => {
       setState((s) => {
         const pts = success ? loc.pointsForSuccess : 0;
@@ -219,10 +261,17 @@ export function GameProvider({ children }: { children: ReactNode }) {
           riskCountdownStart: null,
           riskQuestionStart: null,
           status: success
-            ? { kind: "correct", message: loc.rewardText }
-            : { kind: "groomDrinks", message: loc.penaltyText },
+            ? {
+                kind: "correct",
+                message: opts?.statusMessage ?? loc.rewardText,
+              }
+            : {
+                kind: "groomDrinks",
+                message: opts?.statusMessage ?? loc.penaltyText,
+              },
           finalShown: isFinal ? true : s.finalShown,
           secretUnderBarPhase: offerSecret ? "offer" : s.secretUnderBarPhase,
+          ...emptyPourState(),
         };
       });
     },
@@ -381,6 +430,76 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const startPouring = useCallback(() => {
+    setState((s) => {
+      const loc = LOCATIONS.find((l) => l.id === s.activeQuestId);
+      if (!loc || !isShotPourLocation(loc) || s.pourEvaluated) return s;
+      return { ...s, pourIsPouring: true };
+    });
+  }, []);
+
+  const stopPouring = useCallback(() => {
+    setState((s) => {
+      const loc = LOCATIONS.find((l) => l.id === s.activeQuestId);
+      if (!loc || !isShotPourLocation(loc) || s.pourEvaluated) return s;
+      if (!s.pourIsPouring) return s;
+      return { ...s, ...evaluatePourState(s, s.pourLevel, loc) };
+    });
+  }, []);
+
+  const acknowledgePourResult = useCallback(() => {
+    setState((s) => {
+      const loc = LOCATIONS.find((l) => l.id === s.activeQuestId);
+      if (!loc || !isShotPourLocation(loc) || !s.pourEvaluated || !s.pourResult) {
+        return s;
+      }
+      const success = s.pourResult === "success";
+      const statusMessage = success
+        ? (loc.successTitle ?? loc.rewardText)
+        : s.pourResult === "under"
+          ? (loc.underTitle ?? loc.underPenaltyText ?? loc.penaltyText)
+          : (loc.overTitle ?? loc.overPenaltyText ?? loc.penaltyText);
+      const pts = success ? loc.pointsForSuccess : 0;
+      const penalty = loc.penaltyShots ?? 1;
+      const offerSecret = shouldOfferSecretUnderBar(loc, s);
+      return {
+        ...s,
+        manPoints: s.manPoints + pts,
+        shotCount: success ? s.shotCount : s.shotCount + penalty,
+        completedIds: [...s.completedIds, loc.id],
+        failedIds: success ? s.failedIds : [...s.failedIds, loc.id],
+        activeQuestId: null,
+        ...emptyPourState(),
+        status: success
+          ? { kind: "correct", message: statusMessage }
+          : { kind: "groomDrinks", message: statusMessage },
+        secretUnderBarPhase: offerSecret ? "offer" : s.secretUnderBarPhase,
+      };
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!state.pourIsPouring || state.pourEvaluated) return;
+    const loc = locations.find((l) => l.id === state.activeQuestId);
+    if (!loc || !isShotPourLocation(loc)) return;
+
+    const id = setInterval(() => {
+      setState((s) => {
+        if (!s.pourIsPouring || s.pourEvaluated) return s;
+        const activeLoc = locations.find((l) => l.id === s.activeQuestId);
+        if (!activeLoc || !isShotPourLocation(activeLoc)) return s;
+        const speed = activeLoc.fillSpeed ?? 45;
+        const delta = (speed * POUR_TICK_MS) / 1000;
+        const next = Math.min(100, s.pourLevel + delta);
+        if (next >= 100) {
+          return { ...s, ...evaluatePourState(s, 100, activeLoc) };
+        }
+        return { ...s, pourLevel: next };
+      });
+    }, POUR_TICK_MS);
+    return () => clearInterval(id);
+  }, [state.pourIsPouring, state.pourEvaluated, state.activeQuestId, locations]);
+
   const reset = useCallback(() => setState(initialState()), []);
   const addPoints = useCallback(
     (n: number) =>
@@ -421,6 +540,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         completedIds,
         activeQuestId: null,
         riskPhase: null,
+        ...emptyPourState(),
         status: { kind: "correct", message: loc.rewardText },
         secretUnderBarPhase: offerSecret ? "offer" : s.secretUnderBarPhase,
       };
@@ -444,6 +564,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         failedIds: [...s.failedIds, loc.id],
         activeQuestId: null,
         riskPhase: null,
+        ...emptyPourState(),
         status: {
           kind: "groomDrinks",
           message: loc.penaltyText || "PAN MŁODY PIJE",
@@ -482,6 +603,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
     secretConfirmShot,
     secretEnterUnderBar,
     secretFinishReveal,
+    startPouring,
+    stopPouring,
+    acknowledgePourResult,
   };
 
   return <GameCtx.Provider value={value}>{children}</GameCtx.Provider>;

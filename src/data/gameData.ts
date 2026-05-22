@@ -1,6 +1,8 @@
 // Edytuj treści tutaj — wszystko trzymane w jednym miejscu.
 
-export type QuestType = "quiz" | "challenge" | "risk" | "final";
+export type QuestType = "quiz" | "challenge" | "risk" | "final" | "minigame";
+export type MinigameType = "shotPour";
+export type PourResult = "success" | "under" | "over";
 
 export interface PostQuestSecretUnderBar {
   enabled: boolean;
@@ -43,6 +45,30 @@ export interface Location {
   finalText?: string;
   /** Opcjonalna pułapka po ukończeniu questu (np. MAŁE PIWKO). */
   postQuestSecretUnderBar?: PostQuestSecretUnderBar;
+  // minigame
+  minigameType?: MinigameType;
+  targetMin?: number;
+  targetMax?: number;
+  fillSpeed?: number;
+  successTitle?: string;
+  underTitle?: string;
+  overTitle?: string;
+  underPenaltyText?: string;
+  overPenaltyText?: string;
+}
+
+export function evaluatePourLevel(
+  level: number,
+  targetMin: number,
+  targetMax: number,
+): PourResult {
+  if (level >= targetMin && level <= targetMax) return "success";
+  if (level < targetMin) return "under";
+  return "over";
+}
+
+export function isShotPourLocation(loc: Location): boolean {
+  return loc.type === "minigame" && loc.minigameType === "shotPour";
 }
 
 export interface Verdict {
@@ -149,6 +175,34 @@ export const LOCATIONS: Location[] = [
     },
   },
   {
+    id: "test-narzeczonej",
+    name: "TEST NARZECZONEJ",
+    shortName: "Test",
+    description:
+      "Egzamin z precyzji, odpowiedzialności i kontroli nad laniem.",
+    x: 60,
+    y: 52,
+    type: "minigame",
+    minigameType: "shotPour",
+    locked: true,
+    icon: "🥃",
+    pointsForSuccess: 20,
+    targetMin: 70,
+    targetMax: 85,
+    fillSpeed: 45,
+    introText:
+      "Narzeczona patrzy. Masz nalać idealnego shota. Zielona strefa to 70–85%. Za mało albo za dużo = pijesz.",
+    successTitle: "PERFEKCYJNY SZOT!",
+    underTitle: "NIEDOLANE!",
+    overTitle: "PRZELANE!",
+    rewardText: "Precyzja godna męża. +20 Mąż Points!",
+    underPenaltyText:
+      "Takim laniem nie zbudujesz małżeństwa. Pan młody pije.",
+    overPenaltyText: "Brak kontroli nad sytuacją. Pan młody pije.",
+    penaltyText:
+      "Takim laniem nie zbudujesz małżeństwa. Pan młody pije.",
+  },
+  {
     id: "narzeczona",
     name: "Test Narzeczonej",
     shortName: "Test",
@@ -231,6 +285,7 @@ export const UNLOCK_ORDER: string[] = [
   "hans",
   "dom-strachu",
   "male-piwko",
+  "test-narzeczonej",
   "narzeczona",
   "urzad",
   "wesele",

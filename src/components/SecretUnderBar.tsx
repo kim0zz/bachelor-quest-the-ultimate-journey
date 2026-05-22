@@ -4,23 +4,56 @@ import { useGame } from "@/state/gameStore";
 
 function TrapImage({ src, alt }: { src: string; alt: string }) {
   const [failed, setFailed] = useState(false);
-  if (failed) {
-    return (
-      <div className="flex aspect-video w-full max-w-3xl flex-col items-center justify-center rounded-2xl border-4 border-dashed border-amber-400/60 bg-black/60 p-8 text-center">
-        <div className="text-6xl">🥃</div>
-        <p className="mt-4 text-lg text-white/70">
-          Dodaj zdjęcie: public/assets/groom-drunk-trap.jpg
-        </p>
-      </div>
-    );
-  }
+  const [canLoad, setCanLoad] = useState(false);
+  const isDev = import.meta.env.DEV;
+
+  useEffect(() => {
+    setFailed(false);
+    setCanLoad(true);
+  }, [src]);
+
+  const debugUrl = (
+    <p
+      className={
+        isDev
+          ? "mb-2 text-sm text-amber-200/90"
+          : "mb-2 text-xs text-white/40"
+      }
+    >
+      Image URL: {src}
+    </p>
+  );
+
   return (
-    <img
-      src={src}
-      alt={alt}
-      className="max-h-[50vh] w-full max-w-3xl rounded-2xl border-4 border-rose-500 object-cover shadow-[0_0_60px_rgba(244,63,94,0.6)]"
-      onError={() => setFailed(true)}
-    />
+    <div className="flex w-full max-w-3xl flex-col items-center">
+      {debugUrl}
+      {failed ? (
+        <div className="flex aspect-video w-full flex-col items-center justify-center rounded-2xl border-4 border-dashed border-amber-400/60 bg-black/60 p-8 text-center">
+          <div className="text-6xl">🥃</div>
+          <p className="mt-4 text-lg text-white/70">
+            Nie udało się załadować: {src}
+          </p>
+        </div>
+      ) : canLoad ? (
+        <img
+          key={src}
+          src={src}
+          alt={alt}
+          className="max-h-[50vh] w-full rounded-2xl border-4 border-rose-500 object-cover shadow-[0_0_60px_rgba(244,63,94,0.6)]"
+          loading="eager"
+          decoding="async"
+          onError={() => {
+            console.warn("Trap image failed to load:", src);
+            setFailed(true);
+          }}
+          onLoad={() => console.log("Trap image loaded:", src)}
+        />
+      ) : (
+        <div className="flex aspect-video w-full items-center justify-center rounded-2xl border-4 border-rose-500/40 bg-black/40 text-white/50">
+          Ładowanie obrazu…
+        </div>
+      )}
+    </div>
   );
 }
 

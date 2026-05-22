@@ -3,6 +3,8 @@ import { useEffect } from "react";
 import { useGame, useTick } from "@/state/gameStore";
 import { GroomAvatar } from "./GroomAvatar";
 import { SecretUnderBarController } from "./SecretUnderBar";
+import { ShotPourMinigameController } from "./ShotPourMinigame";
+import { isShotPourLocation } from "@/data/gameData";
 
 export function ControllerView() {
   const {
@@ -149,14 +151,27 @@ export function ControllerView() {
           </>
         ) : (
           <div className="space-y-3">
-            <div className="rounded-2xl border-2 border-fuchsia-400 bg-black/50 p-4">
-              <div className="text-xs uppercase tracking-widest text-fuchsia-300">
-                Quest
+            {activeQuest && !isShotPourLocation(activeQuest) && (
+              <div className="rounded-2xl border-2 border-fuchsia-400 bg-black/50 p-4">
+                <div className="text-xs uppercase tracking-widest text-fuchsia-300">
+                  Quest
+                </div>
+                <div className="text-xl font-black">{activeQuest.name}</div>
               </div>
-              <div className="text-xl font-black">{activeQuest.name}</div>
-            </div>
+            )}
 
-            {activeQuest.type === "quiz" && (
+            {activeQuest && isShotPourLocation(activeQuest) && (
+              <ShotPourMinigameController loc={activeQuest} />
+            )}
+
+            {activeQuest?.type === "minigame" &&
+              !isShotPourLocation(activeQuest) && (
+                <p className="text-center text-white/60">
+                  Nieznana minigra.
+                </p>
+              )}
+
+            {activeQuest?.type === "quiz" && (
               <>
                 <div className="rounded-xl bg-white/5 p-4 text-lg font-bold">
                   {activeQuest.question}

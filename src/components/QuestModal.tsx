@@ -1,4 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
+import { isShotPourLocation } from "@/data/gameData";
+import { ShotPourMinigameTv } from "@/components/ShotPourMinigame";
 import { useGame, useTick } from "@/state/gameStore";
 
 export function QuestModal() {
@@ -52,6 +54,7 @@ export function QuestModal() {
               {activeQuest.type === "quiz" && "🎯 Quiz"}
               {activeQuest.type === "challenge" && "⚡ Wyzwanie"}
               {activeQuest.type === "risk" && "⚠️ HIGH RISK / HIGH REWARD"}
+              {activeQuest.type === "minigame" && "🥃 Minigra"}
               {activeQuest.type === "final" && "👑 Finał"}
             </div>
             <h2 className="text-5xl font-black text-white">
@@ -85,6 +88,15 @@ export function QuestModal() {
                   </p>
                 </>
               )}
+              {isShotPourLocation(activeQuest) && (
+                <ShotPourMinigameTv loc={activeQuest} />
+              )}
+              {activeQuest.type === "minigame" &&
+                !isShotPourLocation(activeQuest) && (
+                  <p className="text-center text-xl text-white/60">
+                    Nieznana minigra — skontaktuj operatora.
+                  </p>
+                )}
               {activeQuest.type === "challenge" && (
                 <>
                   <p className="text-3xl font-bold text-white">

@@ -24,11 +24,13 @@ function LocationPin({ loc }: { loc: Location }) {
     loc.icon ??
     (loc.type === "final"
       ? "👑"
-      : loc.type === "quiz"
-        ? "🎯"
-        : loc.type === "challenge"
-          ? "⚡"
-          : "⚠️");
+      : loc.type === "minigame"
+        ? "🥃"
+        : loc.type === "quiz"
+          ? "🎯"
+          : loc.type === "challenge"
+            ? "⚡"
+            : "⚠️");
 
   return (
     <div
