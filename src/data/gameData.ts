@@ -11,6 +11,8 @@ export interface Location {
   y: number; // % na mapie
   type: QuestType;
   locked: boolean;
+  /** Opcjonalna ikona na mapie (emoji). Bez tego — ikona z type. */
+  icon?: string;
   pointsForSuccess: number;
   rewardText: string;
   penaltyText: string;
@@ -63,61 +65,62 @@ export const VERDICTS: Verdict[] = [
 
 export const LOCATIONS: Location[] = [
   {
-    id: "bar",
-    name: "Bar Początkowy",
-    shortName: "Bar",
-    description: "Tam, gdzie wszystko się zaczęło.",
+    id: "male-piwko",
+    name: "MAŁE PIWKO",
+    shortName: "MP",
+    description:
+      "Legendarna lokacja startowa. Test wiedzy z terenu Małego Piwka.",
     x: 12,
     y: 70,
     type: "quiz",
     locked: false,
+    icon: "🍺",
     pointsForSuccess: 10,
-    rewardText: "+10 MĄŻ POINTS",
-    penaltyText: "PAN MŁODY PIJE",
-    question: "Co pan młody powiedział po trzecim drinku?",
-    answers: [
-      "„Kocham was wszystkich!”",
-      "„Jeszcze jeden i wracam.”",
-      "„Ona jest tą jedyną.”",
-      "„Gdzie jest mój telefon?”",
-    ],
+    rewardText: "Dobra pamięć terenowa. +10 Mąż Points!",
+    penaltyText: "Nie znasz ściany kapselków? Pan młody pije.",
+    question: "Ile jest kapselków na ścianie przy kiblu w MP?",
+    answers: ["1337", "420", "od chuja", "997"],
     correctAnswerIndex: 2,
   },
   {
-    id: "flat",
-    name: "Mieszkanie Legend",
-    shortName: "Flat",
-    description: "Stara kawalerka, nowe historie.",
+    id: "hans",
+    name: "HANS",
+    shortName: "Hans",
+    description: "Test pamięci o człowieku-instytucji.",
     x: 30,
     y: 40,
-    type: "challenge",
+    type: "quiz",
     locked: true,
-    pointsForSuccess: 15,
-    rewardText: "+15 MĄŻ POINTS",
-    penaltyText: "PAN MŁODY PIJE SHOTA",
-    challengeText:
-      "Zadzwoń do mamy i powiedz: „Mamo, jutro robię pranie.” bez śmiechu.",
+    icon: "🎂",
+    pointsForSuccess: 10,
+    rewardText: "Szacunek dla Hansa zachowany. +10 Mąż Points!",
+    penaltyText: "Zapomnieć urodzin Hansa? Shot.",
+    question: "Kiedy Hans ma urodziny?",
+    answers: ["8 maja", "29 lutego", "20 sierpnia", "20 kwietnia"],
+    correctAnswerIndex: 0,
   },
   {
-    id: "przypal",
-    name: "Strefa Przypału",
-    shortName: "Przypał",
-    description: "Tu się rodzą wszystkie złe pomysły.",
+    id: "dom-strachu",
+    name: "DOM STRACHU",
+    shortName: "Strach",
+    description:
+      "Halloweenowy test pamięci. Tu nie ma miejsca na zgadywanie.",
     x: 50,
     y: 65,
     type: "quiz",
     locked: true,
+    icon: "👻",
     pointsForSuccess: 10,
-    rewardText: "+10 MĄŻ POINTS",
-    penaltyText: "WSZYSCY PIJĄ",
-    question: "Jaki jest najbezpieczniejszy tekst po kłótni?",
+    rewardText: "Cruella rozpoznana. +10 Mąż Points!",
+    penaltyText: "Zła odpowiedź. Dom Strachu żąda shota.",
+    question: "Za kogo była przebrana Marta na Halloween 2024?",
     answers: [
-      "„Masz rację, kochanie.”",
-      "„Spokojnie, ogarnij się.”",
-      "„Twoja matka tak mówiła.”",
-      "„Wracam za godzinę.”",
+      "Złodziej z Simsów",
+      "Rzeźnik",
+      "Cruella",
+      "Za cwela",
     ],
-    correctAnswerIndex: 0,
+    correctAnswerIndex: 2,
   },
   {
     id: "narzeczona",
@@ -199,9 +202,9 @@ export const LOCATIONS: Location[] = [
 
 // Kolejność odblokowywania (gracz musi przejść w tej kolejności; risk-questy są zawsze dostępne).
 export const UNLOCK_ORDER: string[] = [
-  "bar",
-  "flat",
-  "przypal",
+  "male-piwko",
+  "hans",
+  "dom-strachu",
   "narzeczona",
   "urzad",
   "wesele",

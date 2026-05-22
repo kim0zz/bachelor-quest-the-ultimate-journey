@@ -21,13 +21,14 @@ function LocationPin({ loc }: { loc: Location }) {
       "border-amber-300 bg-gradient-to-br from-rose-500/40 to-amber-400/40 animate-pulse shadow-[0_0_40px_rgba(251,191,36,0.9)]";
 
   const icon =
-    loc.type === "final"
+    loc.icon ??
+    (loc.type === "final"
       ? "👑"
       : loc.type === "quiz"
         ? "🎯"
         : loc.type === "challenge"
           ? "⚡"
-          : "⚠️";
+          : "⚠️");
 
   return (
     <div
