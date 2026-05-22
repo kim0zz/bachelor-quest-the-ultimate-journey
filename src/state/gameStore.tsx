@@ -17,8 +17,9 @@ export type StatusKind =
   | "wrong"
   | "groomDrinks"
   | "teamDrinks"
-  | "secret"
   | "final";
+
+export type RiskPhase = "intro" | "countdown" | "question" | null;
 
 export interface GameStatus {
   kind: StatusKind;
@@ -29,15 +30,19 @@ export interface GameState {
   manPoints: number;
   shotCount: number;
   teamShots: number;
-  currentLocationId: string; // gdzie stoi avatar
-  activeQuestId: string | null; // otwarty quest
+  currentLocationId: string;
+  activeQuestId: string | null;
   completedIds: string[];
   failedIds: string[];
   status: GameStatus;
   finalShown: boolean;
+  // Risk quest state
+  riskPhase: RiskPhase;
+  riskCountdownStart: number | null;
+  riskQuestionStart: number | null;
 }
 
-const STORAGE_KEY = "bachelor-quest-state-v1";
+const STORAGE_KEY = "bachelor-quest-state-v2";
 
 function initialState(): GameState {
   return {
@@ -50,6 +55,9 @@ function initialState(): GameState {
     failedIds: [],
     status: { kind: "idle", message: "Wybierz lokację" },
     finalShown: false,
+    riskPhase: null,
+    riskCountdownStart: null,
+    riskQuestionStart: null,
   };
 }
 
@@ -74,7 +82,13 @@ interface Ctx {
   goToLocation: (id: string) => void;
   answerQuiz: (index: number) => void;
   resolveChallenge: (success: boolean) => void;
-  revealSecret: () => void;
+  // risk
+  acceptRisk: () => void;
+  escapeRisk: () => void;
+  startRiskQuestion: () => void;
+  answerRisk: (index: number) => void;
+  failRisk: () => void;
+  // final
   showFinal: () => void;
   closeStatus: () => void;
   // admin
@@ -93,7 +107,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<GameState>(() => load());
   const writingRef = useRef(false);
 
-  // persist + cross-tab sync
   useEffect(() => {
     writingRef.current = true;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -121,20 +134,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
     : null;
 
   const availableLocations = useMemo(() => {
-    // pierwsza nieukończona w UNLOCK_ORDER + wszystkie sekrety nieukończone
     const nextMain = UNLOCK_ORDER.find(
       (id) => !state.completedIds.includes(id),
     );
     return locations.filter((l) => {
       if (state.completedIds.includes(l.id)) return false;
-      if (l.isSecret) return true;
+      if (l.type === "risk") return true;
       return l.id === nextMain;
     });
   }, [state.completedIds, locations]);
-
-  const setStatus = useCallback((status: GameStatus) => {
-    setState((s) => ({ ...s, status }));
-  }, []);
 
   const goToLocation = useCallback(
     (id: string) => {
@@ -144,6 +152,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
         ...s,
         currentLocationId: id,
         activeQuestId: id,
+        riskPhase: loc.type === "risk" ? "intro" : null,
+        riskCountdownStart: null,
+        riskQuestionStart: null,
         status: { kind: "questActive", message: `Quest: ${loc.name}` },
       }));
     },
@@ -151,17 +162,31 @@ export function GameProvider({ children }: { children: ReactNode }) {
   );
 
   const completeQuest = useCallback(
-    (success: boolean, loc: Location) => {
+    (
+      success: boolean,
+      loc: Location,
+      opts?: { penaltyShots?: number; teamShotOnSuccess?: boolean },
+    ) => {
       setState((s) => {
         const pts = success ? loc.pointsForSuccess : 0;
         const isFinal = loc.type === "final";
+        const penalty = opts?.penaltyShots ?? loc.penaltyShots ?? 1;
+        const teamBonus =
+          success && (opts?.teamShotOnSuccess ?? loc.teamShotOnSuccess)
+            ? 1
+            : 0;
         return {
           ...s,
           manPoints: s.manPoints + pts,
-          shotCount: !success && !isFinal ? s.shotCount + 1 : s.shotCount,
+          shotCount:
+            !success && !isFinal ? s.shotCount + penalty : s.shotCount,
+          teamShots: s.teamShots + teamBonus,
           completedIds: [...s.completedIds, loc.id],
           failedIds: success ? s.failedIds : [...s.failedIds, loc.id],
           activeQuestId: null,
+          riskPhase: null,
+          riskCountdownStart: null,
+          riskQuestionStart: null,
           status: success
             ? { kind: "correct", message: loc.rewardText }
             : { kind: "groomDrinks", message: loc.penaltyText },
@@ -189,20 +214,50 @@ export function GameProvider({ children }: { children: ReactNode }) {
     [activeQuest, completeQuest],
   );
 
-  const revealSecret = useCallback(() => {
-    if (!activeQuest || activeQuest.type !== "secret") return;
+  // Risk
+  const acceptRisk = useCallback(() => {
     setState((s) => ({
       ...s,
-      manPoints: s.manPoints + activeQuest.pointsForSuccess,
-      teamShots: s.teamShots + 1,
-      completedIds: [...s.completedIds, activeQuest.id],
-      activeQuestId: null,
-      status: {
-        kind: "secret",
-        message: activeQuest.secretText ?? activeQuest.rewardText,
-      },
+      riskPhase: "countdown",
+      riskCountdownStart: Date.now(),
     }));
-  }, [activeQuest]);
+  }, []);
+
+  const escapeRisk = useCallback(() => {
+    setState((s) => ({
+      ...s,
+      activeQuestId: null,
+      riskPhase: null,
+      riskCountdownStart: null,
+      riskQuestionStart: null,
+      status: { kind: "idle", message: "Uciekłeś z high-risk. Wybierz lokację." },
+    }));
+  }, []);
+
+  const startRiskQuestion = useCallback(() => {
+    setState((s) => {
+      if (s.riskPhase !== "countdown") return s;
+      return {
+        ...s,
+        riskPhase: "question",
+        riskQuestionStart: Date.now(),
+      };
+    });
+  }, []);
+
+  const answerRisk = useCallback(
+    (index: number) => {
+      if (!activeQuest || activeQuest.type !== "risk") return;
+      const success = index === activeQuest.correctAnswerIndex;
+      completeQuest(success, activeQuest);
+    },
+    [activeQuest, completeQuest],
+  );
+
+  const failRisk = useCallback(() => {
+    if (!activeQuest || activeQuest.type !== "risk") return;
+    completeQuest(false, activeQuest);
+  }, [activeQuest, completeQuest]);
 
   const showFinal = useCallback(() => {
     if (!activeQuest || activeQuest.type !== "final") return;
@@ -222,7 +277,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
-  // admin
   const reset = useCallback(() => setState(initialState()), []);
   const addPoints = useCallback(
     (n: number) =>
@@ -248,7 +302,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, []);
   const forcePass = useCallback(() => {
     setState((s) => {
-      const loc = LOCATIONS.find((l) => l.id === (s.activeQuestId ?? s.currentLocationId));
+      const loc = LOCATIONS.find(
+        (l) => l.id === (s.activeQuestId ?? s.currentLocationId),
+      );
       if (!loc) return s;
       return {
         ...s,
@@ -257,23 +313,30 @@ export function GameProvider({ children }: { children: ReactNode }) {
           ? s.completedIds
           : [...s.completedIds, loc.id],
         activeQuestId: null,
+        riskPhase: null,
         status: { kind: "correct", message: loc.rewardText },
       };
     });
   }, []);
   const forceFail = useCallback(() => {
     setState((s) => {
-      const loc = LOCATIONS.find((l) => l.id === (s.activeQuestId ?? s.currentLocationId));
+      const loc = LOCATIONS.find(
+        (l) => l.id === (s.activeQuestId ?? s.currentLocationId),
+      );
       if (!loc) return s;
       return {
         ...s,
-        shotCount: s.shotCount + 1,
+        shotCount: s.shotCount + (loc.penaltyShots ?? 1),
         completedIds: s.completedIds.includes(loc.id)
           ? s.completedIds
           : [...s.completedIds, loc.id],
         failedIds: [...s.failedIds, loc.id],
         activeQuestId: null,
-        status: { kind: "groomDrinks", message: loc.penaltyText || "PAN MŁODY PIJE" },
+        riskPhase: null,
+        status: {
+          kind: "groomDrinks",
+          message: loc.penaltyText || "PAN MŁODY PIJE",
+        },
       };
     });
   }, []);
@@ -287,7 +350,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
     goToLocation,
     answerQuiz,
     resolveChallenge,
-    revealSecret,
+    acceptRisk,
+    escapeRisk,
+    startRiskQuestion,
+    answerRisk,
+    failRisk,
     showFinal,
     closeStatus,
     reset,
@@ -306,4 +373,13 @@ export function useGame() {
   const ctx = useContext(GameCtx);
   if (!ctx) throw new Error("useGame must be used inside GameProvider");
   return ctx;
+}
+
+// Lightweight tick hook for re-rendering timers.
+export function useTick(intervalMs = 100) {
+  const [, setT] = useState(0);
+  useEffect(() => {
+    const i = setInterval(() => setT((v) => v + 1), intervalMs);
+    return () => clearInterval(i);
+  }, [intervalMs]);
 }
