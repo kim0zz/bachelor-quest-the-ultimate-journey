@@ -5,6 +5,7 @@ import { ScoreBoard } from "@/components/ScoreBoard";
 import { QuestModal } from "@/components/QuestModal";
 import { StatusBurst } from "@/components/StatusBurst";
 import { FinalVerdict } from "@/components/FinalVerdict";
+import { SecretUnderBarTv } from "@/components/SecretUnderBar";
 
 export const Route = createFileRoute("/tv")({
   head: () => ({
@@ -45,6 +46,7 @@ function TvInner() {
 
       <QuestModal />
       <StatusBurst />
+      <SecretUnderBarTv />
       {state.finalShown && <FinalVerdict />}
     </div>
   );

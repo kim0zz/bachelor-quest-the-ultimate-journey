@@ -8,7 +8,15 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { LOCATIONS, UNLOCK_ORDER, type Location } from "@/data/gameData";
+import {
+  LOCATIONS,
+  MALE_PIWKO_ID,
+  UNLOCK_ORDER,
+  getSecretUnderBarConfig,
+  type Location,
+} from "@/data/gameData";
+
+export type SecretUnderBarPhase = "offer" | "entry" | "reveal";
 
 export type StatusKind =
   | "idle"
@@ -40,16 +48,28 @@ export interface GameState {
   riskPhase: RiskPhase;
   riskCountdownStart: number | null;
   riskQuestionStart: number | null;
+  secretUnderBarCompleted: boolean;
+  secretUnderBarPhase: SecretUnderBarPhase | null;
+  secretUnderBarShotsConfirmed: number;
+  secretShotPulse: number;
 }
 
-const STORAGE_KEY = "bachelor-quest-state-v2";
+const STORAGE_KEY = "bachelor-quest-state-v3";
+
+function shouldOfferSecretUnderBar(
+  loc: Location,
+  s: GameState,
+): boolean {
+  if (s.secretUnderBarCompleted || s.secretUnderBarPhase) return false;
+  return !!getSecretUnderBarConfig(loc) && loc.id === MALE_PIWKO_ID;
+}
 
 function initialState(): GameState {
   return {
     manPoints: 0,
     shotCount: 0,
     teamShots: 0,
-    currentLocationId: LOCATIONS[0].id,
+    currentLocationId: UNLOCK_ORDER[0],
     activeQuestId: null,
     completedIds: [],
     failedIds: [],
@@ -58,6 +78,10 @@ function initialState(): GameState {
     riskPhase: null,
     riskCountdownStart: null,
     riskQuestionStart: null,
+    secretUnderBarCompleted: false,
+    secretUnderBarPhase: null,
+    secretUnderBarShotsConfirmed: 0,
+    secretShotPulse: 0,
   };
 }
 
@@ -99,6 +123,12 @@ interface Ctx {
   forcePass: () => void;
   forceFail: () => void;
   nextLocation: () => void;
+  secretUnderBarConfig: ReturnType<typeof getSecretUnderBarConfig>;
+  secretContinueJourney: () => void;
+  secretChooseUnderBar: () => void;
+  secretConfirmShot: () => void;
+  secretEnterUnderBar: () => void;
+  secretFinishReveal: () => void;
 }
 
 const GameCtx = createContext<Ctx | null>(null);
@@ -175,6 +205,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
           success && (opts?.teamShotOnSuccess ?? loc.teamShotOnSuccess)
             ? 1
             : 0;
+        const offerSecret = shouldOfferSecretUnderBar(loc, s);
         return {
           ...s,
           manPoints: s.manPoints + pts,
@@ -191,6 +222,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
             ? { kind: "correct", message: loc.rewardText }
             : { kind: "groomDrinks", message: loc.penaltyText },
           finalShown: isFinal ? true : s.finalShown,
+          secretUnderBarPhase: offerSecret ? "offer" : s.secretUnderBarPhase,
         };
       });
     },
@@ -273,6 +305,78 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const closeStatus = useCallback(() => {
     setState((s) => ({
       ...s,
+      status:
+        s.secretUnderBarPhase === "offer"
+          ? { kind: "idle", message: "Decyzja na kontrolerze 📱" }
+          : { kind: "idle", message: "Wybierz lokację" },
+    }));
+  }, []);
+
+  const malePiwkoLoc =
+    locations.find((l) => l.id === MALE_PIWKO_ID) ?? null;
+  const secretUnderBarConfig = getSecretUnderBarConfig(malePiwkoLoc);
+
+  const secretContinueJourney = useCallback(() => {
+    setState((s) => ({
+      ...s,
+      secretUnderBarCompleted: true,
+      secretUnderBarPhase: null,
+      secretUnderBarShotsConfirmed: 0,
+      status: { kind: "idle", message: "Wybierz lokację" },
+    }));
+  }, []);
+
+  const secretChooseUnderBar = useCallback(() => {
+    setState((s) => ({
+      ...s,
+      secretUnderBarPhase: "entry",
+      secretUnderBarShotsConfirmed: 0,
+      status: {
+        kind: "idle",
+        message: "Sekret pod barem — potwierdź shoty na kontrolerze",
+      },
+    }));
+  }, []);
+
+  const secretConfirmShot = useCallback(() => {
+    setState((s) => {
+      if (s.secretUnderBarPhase !== "entry" || !secretUnderBarConfig) return s;
+      const required = secretUnderBarConfig.requiredShots;
+      if (s.secretUnderBarShotsConfirmed >= required) return s;
+      const next = s.secretUnderBarShotsConfirmed + 1;
+      return {
+        ...s,
+        shotCount: s.shotCount + 1,
+        secretUnderBarShotsConfirmed: next,
+        secretShotPulse: s.secretShotPulse + 1,
+        status: {
+          kind: "groomDrinks",
+          message: `SHOT ${next}/${required} POTWIERDZONY`,
+        },
+      };
+    });
+  }, [secretUnderBarConfig]);
+
+  const secretEnterUnderBar = useCallback(() => {
+    setState((s) => {
+      if (s.secretUnderBarPhase !== "entry" || !secretUnderBarConfig) return s;
+      if (s.secretUnderBarShotsConfirmed < secretUnderBarConfig.requiredShots) {
+        return s;
+      }
+      return {
+        ...s,
+        secretUnderBarPhase: "reveal",
+        status: { kind: "idle", message: secretUnderBarConfig.revealTitle },
+      };
+    });
+  }, [secretUnderBarConfig]);
+
+  const secretFinishReveal = useCallback(() => {
+    setState((s) => ({
+      ...s,
+      secretUnderBarCompleted: true,
+      secretUnderBarPhase: null,
+      secretUnderBarShotsConfirmed: 0,
       status: { kind: "idle", message: "Wybierz lokację" },
     }));
   }, []);
@@ -306,15 +410,19 @@ export function GameProvider({ children }: { children: ReactNode }) {
         (l) => l.id === (s.activeQuestId ?? s.currentLocationId),
       );
       if (!loc) return s;
+      const completedIds = s.completedIds.includes(loc.id)
+        ? s.completedIds
+        : [...s.completedIds, loc.id];
+      const offerSecret =
+        !s.completedIds.includes(loc.id) && shouldOfferSecretUnderBar(loc, s);
       return {
         ...s,
         manPoints: s.manPoints + loc.pointsForSuccess,
-        completedIds: s.completedIds.includes(loc.id)
-          ? s.completedIds
-          : [...s.completedIds, loc.id],
+        completedIds,
         activeQuestId: null,
         riskPhase: null,
         status: { kind: "correct", message: loc.rewardText },
+        secretUnderBarPhase: offerSecret ? "offer" : s.secretUnderBarPhase,
       };
     });
   }, []);
@@ -324,12 +432,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
         (l) => l.id === (s.activeQuestId ?? s.currentLocationId),
       );
       if (!loc) return s;
+      const completedIds = s.completedIds.includes(loc.id)
+        ? s.completedIds
+        : [...s.completedIds, loc.id];
+      const offerSecret =
+        !s.completedIds.includes(loc.id) && shouldOfferSecretUnderBar(loc, s);
       return {
         ...s,
         shotCount: s.shotCount + (loc.penaltyShots ?? 1),
-        completedIds: s.completedIds.includes(loc.id)
-          ? s.completedIds
-          : [...s.completedIds, loc.id],
+        completedIds,
         failedIds: [...s.failedIds, loc.id],
         activeQuestId: null,
         riskPhase: null,
@@ -337,6 +448,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
           kind: "groomDrinks",
           message: loc.penaltyText || "PAN MŁODY PIJE",
         },
+        secretUnderBarPhase: offerSecret ? "offer" : s.secretUnderBarPhase,
       };
     });
   }, []);
@@ -364,6 +476,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
     forcePass,
     forceFail,
     nextLocation,
+    secretUnderBarConfig,
+    secretContinueJourney,
+    secretChooseUnderBar,
+    secretConfirmShot,
+    secretEnterUnderBar,
+    secretFinishReveal,
   };
 
   return <GameCtx.Provider value={value}>{children}</GameCtx.Provider>;

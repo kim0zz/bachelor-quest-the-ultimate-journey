@@ -2,6 +2,18 @@
 
 export type QuestType = "quiz" | "challenge" | "risk" | "final";
 
+export interface PostQuestSecretUnderBar {
+  enabled: boolean;
+  requiredShots: number;
+  imageUrl: string;
+  title: string;
+  offerTitle: string;
+  enterText: string;
+  revealTitle: string;
+  revealText: string;
+  revealSubtext?: string;
+}
+
 export interface Location {
   id: string;
   name: string;
@@ -29,6 +41,8 @@ export interface Location {
   teamShotOnSuccess?: boolean;
   // final
   finalText?: string;
+  /** Opcjonalna pułapka po ukończeniu questu (np. MAŁE PIWKO). */
+  postQuestSecretUnderBar?: PostQuestSecretUnderBar;
 }
 
 export interface Verdict {
@@ -65,32 +79,14 @@ export const VERDICTS: Verdict[] = [
 
 export const LOCATIONS: Location[] = [
   {
-    id: "male-piwko",
-    name: "MAŁE PIWKO",
-    shortName: "MP",
-    description:
-      "Legendarna lokacja startowa. Test wiedzy z terenu Małego Piwka.",
-    x: 12,
-    y: 70,
-    type: "quiz",
-    locked: false,
-    icon: "🍺",
-    pointsForSuccess: 10,
-    rewardText: "Dobra pamięć terenowa. +10 Mąż Points!",
-    penaltyText: "Nie znasz ściany kapselków? Pan młody pije.",
-    question: "Ile jest kapselków na ścianie przy kiblu w MP?",
-    answers: ["1337", "420", "od chuja", "997"],
-    correctAnswerIndex: 2,
-  },
-  {
     id: "hans",
     name: "HANS",
     shortName: "Hans",
     description: "Test pamięci o człowieku-instytucji.",
-    x: 30,
-    y: 40,
+    x: 12,
+    y: 70,
     type: "quiz",
-    locked: true,
+    locked: false,
     icon: "🎂",
     pointsForSuccess: 10,
     rewardText: "Szacunek dla Hansa zachowany. +10 Mąż Points!",
@@ -105,8 +101,8 @@ export const LOCATIONS: Location[] = [
     shortName: "Strach",
     description:
       "Halloweenowy test pamięci. Tu nie ma miejsca na zgadywanie.",
-    x: 50,
-    y: 65,
+    x: 30,
+    y: 40,
     type: "quiz",
     locked: true,
     icon: "👻",
@@ -121,6 +117,36 @@ export const LOCATIONS: Location[] = [
       "Za cwela",
     ],
     correctAnswerIndex: 2,
+  },
+  {
+    id: "male-piwko",
+    name: "MAŁE PIWKO",
+    shortName: "MP",
+    description:
+      "Legendarna lokacja startowa. Test wiedzy z terenu Małego Piwka.",
+    x: 50,
+    y: 65,
+    type: "quiz",
+    locked: true,
+    icon: "🍺",
+    pointsForSuccess: 10,
+    rewardText: "Dobra pamięć terenowa. +10 Mąż Points!",
+    penaltyText: "Nie znasz ściany kapselków? Pan młody pije.",
+    question: "Ile jest kapselków na ścianie przy kiblu w MP?",
+    answers: ["1337", "420", "od chuja", "997"],
+    correctAnswerIndex: 2,
+    postQuestSecretUnderBar: {
+      enabled: true,
+      requiredShots: 2,
+      imageUrl: "/assets/groom-drunk-trap.jpg",
+      title: "SEKRET POD BAREM",
+      offerTitle:
+        "CHCESZ IŚĆ DALEJ CZY ZOBACZYĆ SEKRET POD BAREM?",
+      enterText: "Żeby zajrzeć pod bar, musisz wypić 2 shoty.",
+      revealTitle: "PUŁAPKA!",
+      revealText: "NAJEBAŁEŚ SIĘ NA DARMO",
+      revealSubtext: "Sekret pod barem okazał się audytem trzeźwości.",
+    },
   },
   {
     id: "narzeczona",
@@ -202,10 +228,19 @@ export const LOCATIONS: Location[] = [
 
 // Kolejność odblokowywania (gracz musi przejść w tej kolejności; risk-questy są zawsze dostępne).
 export const UNLOCK_ORDER: string[] = [
-  "male-piwko",
   "hans",
   "dom-strachu",
+  "male-piwko",
   "narzeczona",
   "urzad",
   "wesele",
 ];
+
+export const MALE_PIWKO_ID = "male-piwko";
+
+export function getSecretUnderBarConfig(
+  loc: Location | null | undefined,
+): PostQuestSecretUnderBar | null {
+  const cfg = loc?.postQuestSecretUnderBar;
+  return cfg?.enabled ? cfg : null;
+}

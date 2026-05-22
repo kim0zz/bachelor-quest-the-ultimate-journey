@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { useEffect } from "react";
 import { useGame, useTick } from "@/state/gameStore";
 import { GroomAvatar } from "./GroomAvatar";
+import { SecretUnderBarController } from "./SecretUnderBar";
 
 export function ControllerView() {
   const {
@@ -108,7 +109,9 @@ export function ControllerView() {
       </div>
 
       <div className="mt-5">
-        {!activeQuest ? (
+        {state.secretUnderBarPhase ? (
+          <SecretUnderBarController />
+        ) : !activeQuest ? (
           <>
             <div className="mb-3 text-xs uppercase tracking-widest text-white/50">
               Wybierz lokację
