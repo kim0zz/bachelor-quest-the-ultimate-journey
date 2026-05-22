@@ -2,62 +2,8 @@ import { motion } from "framer-motion";
 import { useEffect, type PointerEvent } from "react";
 import confetti from "canvas-confetti";
 import type { Location } from "@/data/gameData";
+import { ShotGlassVisual } from "@/components/ShotGlassVisual";
 import { useGame, useTick } from "@/state/gameStore";
-
-function ShotGlass({
-  level,
-  targetMin,
-  targetMax,
-  frozen,
-}: {
-  level: number;
-  targetMin: number;
-  targetMax: number;
-  frozen: boolean;
-}) {
-  return (
-    <div className="flex items-end justify-center gap-6">
-      <div className="flex flex-col items-end gap-2 text-sm font-bold uppercase tracking-wider text-rose-300">
-        <span>ZA DUŻO</span>
-        <span className="text-white/40">↑</span>
-      </div>
-
-      <div className="relative flex flex-col items-center">
-        <div
-          className={`relative h-72 w-28 overflow-hidden rounded-b-3xl rounded-t-lg border-4 border-white/30 bg-white/5 shadow-[inset_0_0_40px_rgba(0,0,0,0.5)] ${
-            frozen ? "ring-4 ring-amber-400/80" : ""
-          }`}
-        >
-          <div
-            className="pointer-events-none absolute left-0 right-0 border-y-2 border-emerald-400/90 bg-emerald-500/25"
-            style={{
-              bottom: `${targetMin}%`,
-              height: `${targetMax - targetMin}%`,
-            }}
-          />
-          <motion.div
-            className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-amber-600 via-amber-400 to-amber-200"
-            animate={{ height: `${level}%` }}
-            transition={
-              frozen ? { duration: 0 } : { type: "spring", stiffness: 300, damping: 28 }
-            }
-            style={{ boxShadow: "0 0 30px rgba(251,191,36,0.6)" }}
-          />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent" />
-        </div>
-        <div className="mt-2 text-5xl font-black tabular-nums text-amber-200">
-          {Math.round(level)}%
-        </div>
-      </div>
-
-      <div className="flex flex-col items-start gap-6 text-sm font-bold uppercase tracking-wider">
-        <span className="text-emerald-300">IDEALNIE</span>
-        <span className="text-rose-300">ZA MAŁO</span>
-        <span className="text-white/40">↓</span>
-      </div>
-    </div>
-  );
-}
 
 function resultSubtext(loc: Location, result: "success" | "under" | "over") {
   if (result === "success") return loc.rewardText;
@@ -75,8 +21,8 @@ export function ShotPourMinigameTv({ loc }: { loc: Location }) {
   const { state } = useGame();
   useTick(50);
 
-  const targetMin = loc.targetMin ?? 70;
-  const targetMax = loc.targetMax ?? 85;
+  const targetMin = loc.targetMin ?? 80;
+  const targetMax = loc.targetMax ?? 95;
   const frozen = state.pourEvaluated;
   const result = state.pourResult;
 
@@ -92,24 +38,29 @@ export function ShotPourMinigameTv({ loc }: { loc: Location }) {
 
   return (
     <div className="text-center">
-      <p className="text-lg text-white/60">{loc.introText}</p>
+      <p className="mx-auto max-w-2xl text-lg text-white/70">{loc.introText}</p>
 
-      <div className="mt-8">
-        <ShotGlass
+      <div className="mt-8 flex justify-center">
+        <ShotGlassVisual
           level={state.pourLevel}
           targetMin={targetMin}
           targetMax={targetMax}
+          isPouring={state.pourIsPouring && !frozen}
           frozen={frozen}
+          result={result}
+          variant="tv"
         />
       </div>
 
-      <p className="mt-6 text-sm uppercase tracking-widest text-white/50">
+      <p className="mt-4 text-sm uppercase tracking-widest text-emerald-400/80">
         Zielona strefa: {targetMin}% – {targetMax}%
       </p>
 
       {!frozen && (
         <p className="mt-4 text-xl text-fuchsia-200 animate-pulse">
-          {state.pourIsPouring ? "LEJE… przytrzymaj na kontrolerze 📱" : "Czekam na LEJ…"}
+          {state.pourIsPouring
+            ? "LEJE… przytrzymaj LEJ na kontrolerze 📱"
+            : "Czekam na LEJ…"}
         </p>
       )}
 
@@ -125,10 +76,10 @@ export function ShotPourMinigameTv({ loc }: { loc: Location }) {
                 : [0, -14, 14, -10, 10, 0],
           }}
           transition={{ duration: 0.45 }}
-          className={`mt-8 rounded-2xl border-2 px-8 py-6 ${
+          className={`mx-auto mt-8 max-w-3xl rounded-2xl border-2 px-8 py-6 ${
             result === "success"
-              ? "border-emerald-400 bg-emerald-500/20"
-              : "border-rose-400 bg-rose-500/20"
+              ? "border-emerald-400 bg-emerald-500/20 shadow-[0_0_40px_rgba(16,185,129,0.35)]"
+              : "border-rose-400 bg-rose-500/20 shadow-[0_0_40px_rgba(244,63,94,0.35)]"
           }`}
         >
           <div
@@ -153,6 +104,8 @@ export function ShotPourMinigameController({ loc }: { loc: Location }) {
     acknowledgePourResult,
   } = useGame();
 
+  const targetMin = loc.targetMin ?? 80;
+  const targetMax = loc.targetMax ?? 95;
   const frozen = state.pourEvaluated;
   const result = state.pourResult;
 
@@ -180,11 +133,19 @@ export function ShotPourMinigameController({ loc }: { loc: Location }) {
         </div>
         <div className="text-2xl font-black">{loc.name}</div>
         <p className="mt-2 text-sm text-white/70">
-          Przytrzymaj LEJ i puść w idealnym momencie.
+          Przytrzymaj LEJ i puść między {targetMin}% a {targetMax}%.
         </p>
-        <p className="mt-2 text-3xl font-black tabular-nums text-amber-300">
-          {Math.round(state.pourLevel)}%
-        </p>
+        <div className="mt-4 flex justify-center">
+          <ShotGlassVisual
+            level={state.pourLevel}
+            targetMin={targetMin}
+            targetMax={targetMax}
+            isPouring={state.pourIsPouring && !frozen}
+            frozen={frozen}
+            result={result}
+            variant="compact"
+          />
+        </div>
       </div>
 
       {!frozen ? (

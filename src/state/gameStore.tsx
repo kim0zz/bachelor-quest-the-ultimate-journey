@@ -33,8 +33,8 @@ function emptyPourState() {
 }
 
 function evaluatePourState(s: GameState, level: number, loc: Location) {
-  const targetMin = loc.targetMin ?? 70;
-  const targetMax = loc.targetMax ?? 85;
+  const targetMin = loc.targetMin ?? 80;
+  const targetMax = loc.targetMax ?? 95;
   const pourResult = evaluatePourLevel(level, targetMin, targetMax);
   return {
     ...emptyPourState(),
