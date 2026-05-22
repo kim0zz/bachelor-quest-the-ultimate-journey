@@ -6,6 +6,7 @@ import { QuestModal } from "@/components/QuestModal";
 import { StatusBurst } from "@/components/StatusBurst";
 import { FinalVerdict } from "@/components/FinalVerdict";
 import { SecretUnderBarTv } from "@/components/SecretUnderBar";
+import { RealtimeIndicator } from "@/components/RealtimeIndicator";
 
 export const Route = createFileRoute("/tv")({
   head: () => ({
@@ -18,9 +19,10 @@ export const Route = createFileRoute("/tv")({
 });
 
 function TvInner() {
-  const { state } = useGame();
+  const { state, realtimeStatus, roomCode } = useGame();
   return (
     <div className="relative min-h-screen overflow-hidden bg-slate-950 p-6 text-white">
+      <RealtimeIndicator status={realtimeStatus} roomCode={roomCode} />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(217,70,239,0.25),_transparent_60%),radial-gradient(ellipse_at_bottom_right,_rgba(34,211,238,0.2),_transparent_60%)]" />
       <header className="relative z-10 flex items-center justify-between">
         <div>

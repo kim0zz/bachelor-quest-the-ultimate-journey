@@ -18,8 +18,15 @@ import {
   type Location,
   type PourResult,
 } from "@/data/gameData";
+import { createInitialGameState } from "@/state/gameDefaults";
+import {
+  useGameRoomSync,
+  type RealtimeStatus,
+} from "@/state/useGameRoomSync";
 
 export type { PourResult };
+export type { RealtimeStatus } from "@/state/useGameRoomSync";
+export { createInitialGameState };
 
 const POUR_TICK_MS = 50;
 
@@ -97,41 +104,21 @@ function shouldOfferSecretUnderBar(
   return !!getSecretUnderBarConfig(loc) && loc.id === MALE_PIWKO_ID;
 }
 
-function initialState(): GameState {
-  return {
-    manPoints: 0,
-    shotCount: 0,
-    teamShots: 0,
-    currentLocationId: UNLOCK_ORDER[0],
-    activeQuestId: null,
-    completedIds: [],
-    failedIds: [],
-    status: { kind: "idle", message: "Wybierz lokację" },
-    finalShown: false,
-    riskPhase: null,
-    riskCountdownStart: null,
-    riskQuestionStart: null,
-    secretUnderBarCompleted: false,
-    secretUnderBarPhase: null,
-    secretUnderBarShotsConfirmed: 0,
-    secretShotPulse: 0,
-    ...emptyPourState(),
-  };
-}
-
 function load(): GameState {
-  if (typeof window === "undefined") return initialState();
+  if (typeof window === "undefined") return createInitialGameState();
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return initialState();
-    return { ...initialState(), ...JSON.parse(raw) };
+    if (!raw) return createInitialGameState();
+    return { ...createInitialGameState(), ...JSON.parse(raw) };
   } catch {
-    return initialState();
+    return createInitialGameState();
   }
 }
 
 interface Ctx {
   state: GameState;
+  realtimeStatus: RealtimeStatus;
+  roomCode: string;
   locations: Location[];
   availableLocations: Location[];
   currentLocation: Location;
@@ -172,6 +159,13 @@ const GameCtx = createContext<Ctx | null>(null);
 
 export function GameProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<GameState>(() => load());
+  const [realtimeStatus, setRealtimeStatus] =
+    useState<RealtimeStatus>("local-only");
+  const { roomCode, pushStateNow } = useGameRoomSync(
+    state,
+    setState,
+    setRealtimeStatus,
+  );
   const writingRef = useRef(false);
 
   useEffect(() => {
@@ -500,7 +494,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(id);
   }, [state.pourIsPouring, state.pourEvaluated, state.activeQuestId, locations]);
 
-  const reset = useCallback(() => setState(initialState()), []);
+  const reset = useCallback(() => {
+    const next = createInitialGameState();
+    setState(next);
+    void pushStateNow(next);
+  }, [pushStateNow]);
   const addPoints = useCallback(
     (n: number) =>
       setState((s) => ({ ...s, manPoints: Math.max(0, s.manPoints + n) })),
@@ -576,6 +574,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const value: Ctx = {
     state,
+    realtimeStatus,
+    roomCode,
     locations,
     availableLocations,
     currentLocation,

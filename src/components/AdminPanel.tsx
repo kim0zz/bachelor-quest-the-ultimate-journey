@@ -1,4 +1,5 @@
 import { useGame } from "@/state/gameStore";
+import { RealtimeIndicator } from "@/components/RealtimeIndicator";
 
 function Btn({
   onClick,
@@ -30,6 +31,8 @@ function Btn({
 export function AdminPanel() {
   const {
     state,
+    realtimeStatus,
+    roomCode,
     locations,
     currentLocation,
     activeQuest,
@@ -46,7 +49,8 @@ export function AdminPanel() {
   const final = locations.find((l) => l.type === "final");
 
   return (
-    <div className="min-h-screen bg-slate-950 p-6 text-white">
+    <div className="relative min-h-screen bg-slate-950 p-6 text-white">
+      <RealtimeIndicator status={realtimeStatus} roomCode={roomCode} />
       <h1 className="text-3xl font-black">
         🛠 Admin / Operator
       </h1>
