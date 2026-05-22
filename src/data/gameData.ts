@@ -1,6 +1,6 @@
 // Edytuj treści tutaj — wszystko trzymane w jednym miejscu.
 
-export type QuestType = "quiz" | "challenge" | "secret" | "final";
+export type QuestType = "quiz" | "challenge" | "risk" | "final";
 
 export interface Location {
   id: string;
@@ -11,18 +11,20 @@ export interface Location {
   y: number; // % na mapie
   type: QuestType;
   locked: boolean;
-  isSecret: boolean;
   pointsForSuccess: number;
   rewardText: string;
   penaltyText: string;
-  // quiz
+  // quiz / risk
   question?: string;
   answers?: string[];
   correctAnswerIndex?: number;
   // challenge
   challengeText?: string;
-  // secret
-  secretText?: string;
+  // risk
+  timeLimitSeconds?: number;
+  introText?: string;
+  penaltyShots?: number;
+  teamShotOnSuccess?: boolean;
   // final
   finalText?: string;
 }
@@ -34,7 +36,7 @@ export interface Verdict {
 }
 
 export const GROOM_NAME = "Pan Młody";
-export const GROOM_AVATAR_URL: string | null = null; // podmień na URL zdjęcia, jeśli chcesz
+export const GROOM_AVATAR_URL: string | null = null;
 
 export const VERDICTS: Verdict[] = [
   {
@@ -69,7 +71,6 @@ export const LOCATIONS: Location[] = [
     y: 70,
     type: "quiz",
     locked: false,
-    isSecret: false,
     pointsForSuccess: 10,
     rewardText: "+10 MĄŻ POINTS",
     penaltyText: "PAN MŁODY PIJE",
@@ -91,7 +92,6 @@ export const LOCATIONS: Location[] = [
     y: 40,
     type: "challenge",
     locked: true,
-    isSecret: false,
     pointsForSuccess: 15,
     rewardText: "+15 MĄŻ POINTS",
     penaltyText: "PAN MŁODY PIJE SHOTA",
@@ -107,7 +107,6 @@ export const LOCATIONS: Location[] = [
     y: 65,
     type: "quiz",
     locked: true,
-    isSecret: false,
     pointsForSuccess: 10,
     rewardText: "+10 MĄŻ POINTS",
     penaltyText: "WSZYSCY PIJĄ",
@@ -129,7 +128,6 @@ export const LOCATIONS: Location[] = [
     y: 35,
     type: "quiz",
     locked: true,
-    isSecret: false,
     pointsForSuccess: 20,
     rewardText: "+20 MĄŻ POINTS",
     penaltyText: "PAN MŁODY PIJE PODWÓJNEGO",
@@ -143,20 +141,30 @@ export const LOCATIONS: Location[] = [
     correctAnswerIndex: 3,
   },
   {
-    id: "kebab",
-    name: "Tajemniczy Kebab",
-    shortName: "???",
-    description: "Coś tu pachnie sekretem.",
+    id: "risk-narzeczona",
+    name: "High Risk: Test Narzeczonej",
+    shortName: "HIGH RISK",
+    description: "Wysokie ryzyko, wysoka nagroda.",
     x: 42,
     y: 18,
-    type: "secret",
+    type: "risk",
     locked: false,
-    isSecret: true,
     pointsForSuccess: 25,
-    rewardText: "SEKRET ODKRYTY! +25 PUNKTÓW",
-    penaltyText: "",
-    secretText:
-      "Znalazłeś sekretny kebab życia. WSZYSCY PIJĄ za zdrowie pana młodego!",
+    penaltyShots: 1,
+    timeLimitSeconds: 10,
+    teamShotOnSuccess: true,
+    introText:
+      "Masz 10 sekund. Dobra odpowiedź daje +25 Mąż Points. Zła odpowiedź albo brak odpowiedzi = shot.",
+    question: "Narzeczona mówi: „Rób co chcesz”. Co robisz?",
+    answers: [
+      "Robię co chcę",
+      "Pytam, co naprawdę ma na myśli",
+      "Udaje, że nie słyszałem",
+      "Zamawiam kebaba",
+    ],
+    correctAnswerIndex: 1,
+    rewardText: "Instynkt męża aktywowany. +25 Mąż Points!",
+    penaltyText: "Błąd krytyczny. Pan młody pije.",
   },
   {
     id: "urzad",
@@ -167,7 +175,6 @@ export const LOCATIONS: Location[] = [
     y: 60,
     type: "challenge",
     locked: true,
-    isSecret: false,
     pointsForSuccess: 20,
     rewardText: "+20 MĄŻ POINTS",
     penaltyText: "PAN MŁODY PIJE SHOTA",
@@ -183,7 +190,6 @@ export const LOCATIONS: Location[] = [
     y: 25,
     type: "final",
     locked: true,
-    isSecret: false,
     pointsForSuccess: 0,
     rewardText: "WERDYKT KOŃCOWY",
     penaltyText: "",
@@ -191,7 +197,7 @@ export const LOCATIONS: Location[] = [
   },
 ];
 
-// Kolejność odblokowywania (gracz musi przejść w tej kolejności, sekrety są zawsze dostępne).
+// Kolejność odblokowywania (gracz musi przejść w tej kolejności; risk-questy są zawsze dostępne).
 export const UNLOCK_ORDER: string[] = [
   "bar",
   "flat",
