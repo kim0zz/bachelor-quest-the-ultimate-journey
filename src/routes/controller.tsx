@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { GameProvider } from "@/state/gameStore";
 import { ControllerView } from "@/components/ControllerView";
 
 export const Route = createFileRoute("/controller")({
@@ -9,9 +8,5 @@ export const Route = createFileRoute("/controller")({
       { name: "description", content: "Kontroler dla Pana Młodego." },
     ],
   }),
-  component: () => (
-    <GameProvider>
-      <ControllerView />
-    </GameProvider>
-  ),
+  component: ControllerView,
 });

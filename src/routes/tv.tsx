@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { GameProvider, useGame } from "@/state/gameStore";
+import { useGame } from "@/state/gameStore";
 import { MapView } from "@/components/MapView";
 import { ScoreBoard } from "@/components/ScoreBoard";
 import { QuestModal } from "@/components/QuestModal";
@@ -13,11 +13,7 @@ export const Route = createFileRoute("/tv")({
       { name: "description", content: "Główny ekran gry imprezowej." },
     ],
   }),
-  component: () => (
-    <GameProvider>
-      <TvInner />
-    </GameProvider>
-  ),
+  component: TvInner,
 });
 
 function TvInner() {
