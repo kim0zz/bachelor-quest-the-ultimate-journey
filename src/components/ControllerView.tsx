@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
-import { useGame } from "@/state/gameStore";
+import { useEffect } from "react";
+import { useGame, useTick } from "@/state/gameStore";
 import { GroomAvatar } from "./GroomAvatar";
 
 export function ControllerView() {
@@ -11,9 +12,65 @@ export function ControllerView() {
     goToLocation,
     answerQuiz,
     resolveChallenge,
-    revealSecret,
+    acceptRisk,
+    escapeRisk,
+    startRiskQuestion,
+    answerRisk,
+    failRisk,
     showFinal,
   } = useGame();
+
+  // Tick to update timers
+  useTick(100);
+
+  // Drive risk phase transitions from the controller (single source of truth).
+  useEffect(() => {
+    if (!activeQuest || activeQuest.type !== "risk") return;
+    if (state.riskPhase === "countdown" && state.riskCountdownStart) {
+      const elapsed = Date.now() - state.riskCountdownStart;
+      const remaining = 3000 - elapsed;
+      if (remaining <= 0) {
+        startRiskQuestion();
+        return;
+      }
+      const t = setTimeout(startRiskQuestion, remaining);
+      return () => clearTimeout(t);
+    }
+    if (state.riskPhase === "question" && state.riskQuestionStart) {
+      const limit = (activeQuest.timeLimitSeconds ?? 10) * 1000;
+      const elapsed = Date.now() - state.riskQuestionStart;
+      const remaining = limit - elapsed;
+      if (remaining <= 0) {
+        failRisk();
+        return;
+      }
+      const t = setTimeout(failRisk, remaining);
+      return () => clearTimeout(t);
+    }
+  }, [
+    activeQuest,
+    state.riskPhase,
+    state.riskCountdownStart,
+    state.riskQuestionStart,
+    startRiskQuestion,
+    failRisk,
+  ]);
+
+  const riskCountdownNum =
+    state.riskPhase === "countdown" && state.riskCountdownStart
+      ? Math.max(1, 3 - Math.floor((Date.now() - state.riskCountdownStart) / 1000))
+      : 0;
+
+  const riskRemaining =
+    state.riskPhase === "question" &&
+    state.riskQuestionStart &&
+    activeQuest?.timeLimitSeconds
+      ? Math.max(
+          0,
+          activeQuest.timeLimitSeconds -
+            Math.floor((Date.now() - state.riskQuestionStart) / 1000),
+        )
+      : 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-purple-950 to-slate-950 p-5 text-white">
@@ -62,21 +119,29 @@ export function ControllerView() {
                   Brak dostępnych lokacji. Operator może odblokować.
                 </div>
               )}
-              {availableLocations.map((l) => (
-                <motion.button
-                  key={l.id}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => goToLocation(l.id)}
-                  className="w-full rounded-2xl border-2 border-fuchsia-400 bg-gradient-to-r from-fuchsia-600/40 to-purple-600/40 p-5 text-left shadow-[0_0_20px_rgba(217,70,239,0.3)]"
-                >
-                  <div className="text-2xl font-black">
-                    {l.isSecret ? "❓ ???" : l.name}
-                  </div>
-                  <div className="text-sm text-white/70">
-                    {l.isSecret ? "Sekretne miejsce…" : l.description}
-                  </div>
-                </motion.button>
-              ))}
+              {availableLocations.map((l) => {
+                const risk = l.type === "risk";
+                return (
+                  <motion.button
+                    key={l.id}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => goToLocation(l.id)}
+                    className={
+                      risk
+                        ? "w-full rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-rose-600/60 to-amber-500/60 p-5 text-left shadow-[0_0_30px_rgba(251,191,36,0.5)]"
+                        : "w-full rounded-2xl border-2 border-fuchsia-400 bg-gradient-to-r from-fuchsia-600/40 to-purple-600/40 p-5 text-left shadow-[0_0_20px_rgba(217,70,239,0.3)]"
+                    }
+                  >
+                    {risk && (
+                      <div className="mb-1 text-xs font-black uppercase tracking-widest text-amber-200">
+                        ⚠️ HIGH RISK
+                      </div>
+                    )}
+                    <div className="text-2xl font-black">{l.name}</div>
+                    <div className="text-sm text-white/70">{l.description}</div>
+                  </motion.button>
+                );
+              })}
             </div>
           </>
         ) : (
@@ -131,13 +196,80 @@ export function ControllerView() {
               </>
             )}
 
-            {activeQuest.type === "secret" && (
-              <button
-                onClick={revealSecret}
-                className="w-full rounded-2xl bg-gradient-to-r from-fuchsia-500 to-amber-400 p-6 text-2xl font-black uppercase shadow-lg"
-              >
-                ✨ Odkryj sekret
-              </button>
+            {activeQuest.type === "risk" && state.riskPhase === "intro" && (
+              <>
+                <div className="rounded-2xl border-2 border-amber-300 bg-gradient-to-br from-rose-600/40 to-amber-500/30 p-4 text-center">
+                  <div className="text-2xl font-black uppercase tracking-widest text-amber-200">
+                    HIGH RISK / HIGH REWARD
+                  </div>
+                  <div className="mt-2 text-white/90">
+                    Możesz zdobyć dużo Mąż Points, ale porażka oznacza karę.
+                  </div>
+                  {activeQuest.introText && (
+                    <div className="mt-3 text-sm text-white/70">
+                      {activeQuest.introText}
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={acceptRisk}
+                  className="w-full rounded-2xl bg-gradient-to-r from-rose-500 to-amber-400 p-6 text-2xl font-black uppercase text-black shadow-lg"
+                >
+                  🔥 Wchodzę w to
+                </button>
+                <button
+                  onClick={escapeRisk}
+                  className="w-full rounded-2xl border-2 border-white/30 bg-white/5 p-5 text-lg font-bold uppercase"
+                >
+                  🏃 Uciekam
+                </button>
+              </>
+            )}
+
+            {activeQuest.type === "risk" && state.riskPhase === "countdown" && (
+              <div className="rounded-2xl border-2 border-amber-300 bg-black/60 p-10 text-center">
+                <div className="text-sm uppercase tracking-widest text-amber-200">
+                  Start za…
+                </div>
+                <div className="text-[10rem] leading-none font-black text-amber-300 drop-shadow-[0_0_30px_rgba(251,191,36,0.7)]">
+                  {riskCountdownNum}
+                </div>
+              </div>
+            )}
+
+            {activeQuest.type === "risk" && state.riskPhase === "question" && (
+              <>
+                <div
+                  className={`rounded-2xl border-2 p-4 text-center font-black tabular-nums ${
+                    riskRemaining <= 3
+                      ? "border-rose-400 bg-rose-500/30 text-rose-200"
+                      : "border-amber-300 bg-amber-500/20 text-amber-200"
+                  }`}
+                >
+                  <div className="text-xs uppercase tracking-widest">
+                    Czas
+                  </div>
+                  <div className="text-6xl">{riskRemaining}s</div>
+                </div>
+                <div className="rounded-xl bg-white/5 p-4 text-lg font-bold">
+                  {activeQuest.question}
+                </div>
+                <div className="grid gap-3">
+                  {activeQuest.answers?.map((a, i) => (
+                    <motion.button
+                      key={i}
+                      whileTap={{ scale: 0.96 }}
+                      onClick={() => answerRisk(i)}
+                      className="flex items-center gap-4 rounded-2xl border-2 border-amber-300/60 bg-white/5 p-5 text-left text-lg active:bg-amber-500/30"
+                    >
+                      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-400 text-xl font-black text-black">
+                        {String.fromCharCode(65 + i)}
+                      </span>
+                      <span>{a}</span>
+                    </motion.button>
+                  ))}
+                </div>
+              </>
             )}
 
             {activeQuest.type === "final" && (

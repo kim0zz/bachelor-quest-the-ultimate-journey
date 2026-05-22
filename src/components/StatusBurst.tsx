@@ -10,15 +10,14 @@ export function StatusBurst() {
     kind === "correct" ||
     kind === "wrong" ||
     kind === "groomDrinks" ||
-    kind === "teamDrinks" ||
-    kind === "secret";
+    kind === "teamDrinks";
 
   useEffect(() => {
     if (!show) return;
-    if (kind === "correct" || kind === "secret") {
+    if (kind === "correct") {
       confetti({
-        particleCount: 140,
-        spread: 90,
+        particleCount: 180,
+        spread: 100,
         origin: { y: 0.6 },
         colors: ["#d946ef", "#22d3ee", "#facc15", "#10b981"],
       });
@@ -30,9 +29,7 @@ export function StatusBurst() {
   const bg =
     kind === "correct"
       ? "from-emerald-500 to-cyan-500"
-      : kind === "secret"
-        ? "from-fuchsia-500 to-amber-400"
-        : "from-rose-600 to-amber-600";
+      : "from-rose-600 to-amber-600";
 
   const shake =
     kind === "groomDrinks" || kind === "wrong"
