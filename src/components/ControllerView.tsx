@@ -4,6 +4,7 @@ import { useGame, useTick } from "@/state/gameStore";
 import { GroomAvatar } from "./GroomAvatar";
 import { SecretUnderBarController } from "./SecretUnderBar";
 import { ShotPourMinigameController } from "./ShotPourMinigame";
+import { BitwyController } from "./Bitwy";
 import { isShotPourLocation } from "@/data/gameData";
 
 export function ControllerView() {
@@ -85,7 +86,7 @@ export function ControllerView() {
   const mpCompleted = state.completedIds.includes("male-piwko");
 
   const isFeedback =
-    !activeQuest &&
+    (!activeQuest || state.completedIds.includes(activeQuest.id)) &&
     (state.status.kind === "correct" ||
       state.status.kind === "wrong" ||
       state.status.kind === "groomDrinks" ||
@@ -255,6 +256,8 @@ export function ControllerView() {
               Dalej →
             </motion.button>
           </div>
+        ) : activeQuest?.id === "bitwy" && state.bitwyPhase ? (
+          <BitwyController />
         ) : !activeQuest ? (
           <>
             {state.earlyGamePhase === "choosing-bar" && (

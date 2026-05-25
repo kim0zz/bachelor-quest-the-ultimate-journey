@@ -7,6 +7,9 @@ export function QuestModal() {
   const { activeQuest, state } = useGame();
   useTick(100);
 
+  if (activeQuest?.id === "bitwy") return null;
+  if (activeQuest && state.completedIds.includes(activeQuest.id)) return null;
+
   const isRisk = activeQuest?.type === "risk";
 
   const riskCountdownNum =

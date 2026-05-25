@@ -36,7 +36,14 @@ export function createInitialGameState() {
     bartenderPhase: null as "intro" | "outcome" | null,
     bartenderChoiceIndex: null as number | null,
     // Food stage (after bars)
-    foodPhase: null as "choosing" | "pekin-event" | "pekin-aftermath" | null,
+    foodPhase: null as "choosing" | "pekin-event" | "pekin-aftermath" | "pekin-transition" | null,
+    // BITWY multi-phase quest
+    bitwyPhase: null as string | null,
+    bitwyKitchenShots: 0,
+    bitwyChoseKitchen: false,
+    // Balance minigame
+    balanceStartTime: null as number | null,
+    balanceStopPosition: null as number | null,
     ...emptyPourState(),
   };
 }

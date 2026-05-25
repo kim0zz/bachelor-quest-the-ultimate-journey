@@ -13,6 +13,10 @@ import {
   LOCATIONS,
   MALE_PIWKO_ID,
   UNLOCK_ORDER,
+  BALANCE_PERIOD_MS,
+  BALANCE_TARGET_MIN,
+  BALANCE_TARGET_MAX,
+  BALANCE_POINTS,
   evaluatePourLevel,
   getSecretUnderBarConfig,
   isShotPourLocation,
@@ -58,6 +62,17 @@ export type EarlyGamePhase = "choosing-bar" | "post-bar-choice" | null;
 export type BartenderPhase = "intro" | "outcome" | null;
 export type FoodPhase = "choosing" | "pekin-event" | "pekin-aftermath" | "pekin-transition" | null;
 
+export type BitwyPhase =
+  | "intro"
+  | "kitchen-shots"
+  | "kitchen-confession"
+  | "salon-narrator"
+  | "salon-shot-pour"
+  | "balance-intro"
+  | "balance"
+  | "complete"
+  | null;
+
 export type StatusKind =
   | "idle"
   | "questActive"
@@ -99,6 +114,11 @@ export interface GameState {
   bartenderPhase: BartenderPhase;
   bartenderChoiceIndex: number | null;
   foodPhase: FoodPhase;
+  bitwyPhase: BitwyPhase;
+  bitwyKitchenShots: number;
+  bitwyChoseKitchen: boolean;
+  balanceStartTime: number | null;
+  balanceStopPosition: number | null;
 }
 
 const STORAGE_KEY = "bachelor-quest-state-v3";
@@ -109,6 +129,11 @@ function shouldOfferSecretUnderBar(
 ): boolean {
   if (s.secretUnderBarCompleted || s.secretUnderBarPhase) return false;
   return !!getSecretUnderBarConfig(loc) && loc.id === MALE_PIWKO_ID;
+}
+
+function canPour(loc: Location, s: GameState): boolean {
+  if (isShotPourLocation(loc)) return true;
+  return loc.id === "bitwy" && s.bitwyPhase === "salon-shot-pour";
 }
 
 const FOOD_NARRATOR =
@@ -191,6 +216,11 @@ interface Ctx {
   choosePostBar: (goToOtherBar: boolean) => void;
   chooseFoodOption: (option: "pekin" | "gofer") => void;
   acknowledgePekinBar: () => void;
+  chooseBitwyPath: (kitchen: boolean) => void;
+  confirmBitwyKitchenShot: () => void;
+  listenToSkiba: () => void;
+  advanceBitwy: () => void;
+  stopBalance: () => void;
 }
 
 const GameCtx = createContext<Ctx | null>(null);
@@ -261,7 +291,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       if (state.completedIds.includes(l.id)) return false;
       if (l.type === "start") return false;
       if (l.type === "risk") {
-        return state.completedIds.includes("test-narzeczonej");
+        return state.completedIds.includes("dzialka");
       }
       if ((BAR_IDS as readonly string[]).includes(l.id)) return false;
       return l.id === nextMain;
@@ -314,6 +344,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
           ...emptyPourState(),
           bartenderPhase: hasBartender ? ("intro" as const) : null,
           bartenderChoiceIndex: null,
+          bitwyPhase: id === "bitwy" ? ("intro" as BitwyPhase) : null,
+          bitwyKitchenShots: id === "bitwy" ? 0 : s.bitwyKitchenShots,
+          bitwyChoseKitchen: id === "bitwy" ? false : s.bitwyChoseKitchen,
+          balanceStartTime: null,
+          balanceStopPosition: null,
           status: { kind: "questActive" as const, message: `Quest: ${loc.name}` },
         };
       });
@@ -447,18 +482,28 @@ export function GameProvider({ children }: { children: ReactNode }) {
       if (s.secretUnderBarPhase === "offer") {
         return { ...s, status: { kind: "idle", message: "Decyzja na kontrolerze 📱" } };
       }
-      // After acknowledging quiz feedback, check if Secret Under Bar should be offered
-      if (
-        (s.status.kind === "correct" || s.status.kind === "groomDrinks") &&
-        !s.secretUnderBarCompleted &&
-        !s.secretUnderBarPhase &&
-        s.completedIds.includes(MALE_PIWKO_ID) &&
-        !!getSecretUnderBarConfig(LOCATIONS.find((l) => l.id === MALE_PIWKO_ID) ?? null)
-      ) {
+      // BITWY: after pour feedback, go to balance intro
+      if (s.activeQuestId === "bitwy" && s.bitwyPhase === "salon-shot-pour" &&
+          (s.status.kind === "correct" || s.status.kind === "groomDrinks")) {
         return {
           ...s,
-          secretUnderBarPhase: "offer" as const,
-          status: { kind: "idle" as const, message: "Decyzja na kontrolerze 📱" },
+          bitwyPhase: "balance-intro" as BitwyPhase,
+          status: {
+            kind: "idle" as const,
+            message: "Po tym szocie Lama zaczyna widzieć fabułę w lekkim opóźnieniu. Postanawia wstać, zanim organizm złoży wypowiedzenie.",
+          },
+        };
+      }
+      // BITWY: after balance feedback, go to complete
+      if (s.activeQuestId === "bitwy" && s.bitwyPhase === "balance" &&
+          (s.status.kind === "correct" || s.status.kind === "groomDrinks")) {
+        return {
+          ...s,
+          bitwyPhase: "complete" as BitwyPhase,
+          status: {
+            kind: "idle" as const,
+            message: "Lama wstaje. Nie jest to piękne, ale jest skuteczne. Czas opuścić BITWY, zanim ktoś zaproponuje trzecią kuchnię.",
+          },
         };
       }
       // After Pekin Bar team shot, show transition note
@@ -692,7 +737,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const startPouring = useCallback(() => {
     setState((s) => {
       const loc = LOCATIONS.find((l) => l.id === s.activeQuestId);
-      if (!loc || !isShotPourLocation(loc) || s.pourEvaluated) return s;
+      if (!loc || !canPour(loc, s) || s.pourEvaluated) return s;
       return { ...s, pourIsPouring: true };
     });
   }, []);
@@ -700,7 +745,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const stopPouring = useCallback(() => {
     setState((s) => {
       const loc = LOCATIONS.find((l) => l.id === s.activeQuestId);
-      if (!loc || !isShotPourLocation(loc) || s.pourEvaluated) return s;
+      if (!loc || !canPour(loc, s) || s.pourEvaluated) return s;
       if (!s.pourIsPouring) return s;
       return { ...s, ...evaluatePourState(s, s.pourLevel, loc) };
     });
@@ -709,9 +754,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const acknowledgePourResult = useCallback(() => {
     setState((s) => {
       const loc = LOCATIONS.find((l) => l.id === s.activeQuestId);
-      if (!loc || !isShotPourLocation(loc) || !s.pourEvaluated || !s.pourResult) {
-        return s;
-      }
+      if (!loc || !s.pourEvaluated || !s.pourResult) return s;
+      if (!canPour(loc, s)) return s;
       const success = s.pourResult === "success";
       const statusMessage = success
         ? (loc.successTitle ?? loc.rewardText)
@@ -720,7 +764,18 @@ export function GameProvider({ children }: { children: ReactNode }) {
           : (loc.overTitle ?? loc.overPenaltyText ?? loc.penaltyText);
       const pts = success ? loc.pointsForSuccess : 0;
       const penalty = loc.penaltyShots ?? 1;
-      const offerSecret = shouldOfferSecretUnderBar(loc, s);
+      // BITWY: stay in quest, feedback will transition to balance via closeStatus
+      if (loc.id === "bitwy") {
+        return {
+          ...s,
+          manPoints: s.manPoints + pts,
+          shotCount: success ? s.shotCount : s.shotCount + penalty,
+          ...emptyPourState(),
+          status: success
+            ? { kind: "correct" as const, message: statusMessage }
+            : { kind: "groomDrinks" as const, message: statusMessage },
+        };
+      }
       return {
         ...s,
         manPoints: s.manPoints + pts,
@@ -732,7 +787,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
         status: success
           ? { kind: "correct", message: statusMessage }
           : { kind: "groomDrinks", message: statusMessage },
-        secretUnderBarPhase: offerSecret ? "offer" : s.secretUnderBarPhase,
       };
     });
   }, []);
@@ -740,13 +794,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!state.pourIsPouring || state.pourEvaluated) return;
     const loc = locations.find((l) => l.id === state.activeQuestId);
-    if (!loc || !isShotPourLocation(loc)) return;
+    if (!loc || !canPour(loc, state)) return;
 
     const id = setInterval(() => {
       setState((s) => {
         if (!s.pourIsPouring || s.pourEvaluated) return s;
         const activeLoc = locations.find((l) => l.id === s.activeQuestId);
-        if (!activeLoc || !isShotPourLocation(activeLoc)) return s;
+        if (!activeLoc || !canPour(activeLoc, s)) return s;
         const speed = activeLoc.fillSpeed ?? 45;
         const delta = (speed * POUR_TICK_MS) / 1000;
         const next = Math.min(100, s.pourLevel + delta);
@@ -757,7 +811,110 @@ export function GameProvider({ children }: { children: ReactNode }) {
       });
     }, POUR_TICK_MS);
     return () => clearInterval(id);
-  }, [state.pourIsPouring, state.pourEvaluated, state.activeQuestId, locations]);
+  }, [state.pourIsPouring, state.pourEvaluated, state.activeQuestId, state.bitwyPhase, locations]);
+
+  // ── BITWY actions ──────────────────────────────────────────────
+  const chooseBitwyPath = useCallback((kitchen: boolean) => {
+    setState((s) => {
+      if (s.bitwyPhase !== "intro") return s;
+      return {
+        ...s,
+        bitwyPhase: kitchen ? ("kitchen-shots" as BitwyPhase) : ("salon-narrator" as BitwyPhase),
+        bitwyChoseKitchen: kitchen,
+        bitwyKitchenShots: 0,
+        status: {
+          kind: "idle" as const,
+          message: kitchen
+            ? "Lama wchodzi do kuchni na BITWY."
+            : "Lama próbuje zachować klasę i ominąć kuchnię. Skiba zapamięta ten brak lojalności.",
+        },
+      };
+    });
+  }, []);
+
+  const confirmBitwyKitchenShot = useCallback(() => {
+    setState((s) => {
+      if (s.bitwyPhase !== "kitchen-shots" || s.bitwyKitchenShots >= 2) return s;
+      const next = s.bitwyKitchenShots + 1;
+      return {
+        ...s,
+        shotCount: s.shotCount + 1,
+        bitwyKitchenShots: next,
+        status: { kind: "idle" as const, message: `Shot ${next}/2 potwierdzony! 🥃` },
+      };
+    });
+  }, []);
+
+  const listenToSkiba = useCallback(() => {
+    setState((s) => {
+      if (s.bitwyPhase !== "kitchen-shots" || s.bitwyKitchenShots < 2) return s;
+      return {
+        ...s,
+        bitwyPhase: "kitchen-confession" as BitwyPhase,
+        status: { kind: "idle" as const, message: "Skiba ma coś do powiedzenia..." },
+      };
+    });
+  }, []);
+
+  const advanceBitwy = useCallback(() => {
+    setState((s) => {
+      if (s.activeQuestId !== "bitwy" || !s.bitwyPhase) return s;
+      switch (s.bitwyPhase) {
+        case "kitchen-confession":
+          return {
+            ...s,
+            bitwyPhase: "salon-narrator" as BitwyPhase,
+            status: { kind: "idle" as const, message: "Czas na salon." },
+          };
+        case "salon-narrator":
+          return {
+            ...s,
+            bitwyPhase: "salon-shot-pour" as BitwyPhase,
+            ...emptyPourState(),
+            status: { kind: "questActive" as const, message: "BITWY — Nalej szota" },
+          };
+        case "balance-intro":
+          return {
+            ...s,
+            bitwyPhase: "balance" as BitwyPhase,
+            balanceStartTime: Date.now(),
+            balanceStopPosition: null,
+            status: { kind: "questActive" as const, message: "ZŁAP PION" },
+          };
+        case "complete":
+          return {
+            ...s,
+            bitwyPhase: null,
+            activeQuestId: null,
+            completedIds: [...s.completedIds, "bitwy"],
+            balanceStartTime: null,
+            balanceStopPosition: null,
+            status: { kind: "idle" as const, message: "Wybierz lokację" },
+          };
+        default:
+          return s;
+      }
+    });
+  }, []);
+
+  const stopBalance = useCallback(() => {
+    setState((s) => {
+      if (s.bitwyPhase !== "balance" || !s.balanceStartTime || s.balanceStopPosition != null) return s;
+      const elapsed = Date.now() - s.balanceStartTime;
+      const t = (elapsed % BALANCE_PERIOD_MS) / BALANCE_PERIOD_MS;
+      const pos = t < 0.5 ? t * 200 : 200 - t * 200;
+      const success = pos >= BALANCE_TARGET_MIN && pos <= BALANCE_TARGET_MAX;
+      return {
+        ...s,
+        balanceStopPosition: pos,
+        manPoints: s.manPoints + (success ? BALANCE_POINTS : 0),
+        shotCount: success ? s.shotCount : s.shotCount + 1,
+        status: success
+          ? { kind: "correct" as const, message: "Pion złapany. Chwilowo. Fizyka jest zaskoczona." }
+          : { kind: "groomDrinks" as const, message: "Pion uciekł. Godność też. Lama pije." },
+      };
+    });
+  }, []);
 
   const reset = useCallback(() => {
     const next = createInitialGameState();
@@ -805,9 +962,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
         riskPhase: null,
         bartenderPhase: null,
         bartenderChoiceIndex: null,
+        bitwyPhase: null,
+        balanceStartTime: null,
+        balanceStopPosition: null,
         ...emptyPourState(),
         status: { kind: "correct", message: loc.rewardText },
-        secretUnderBarPhase: offerSecret ? "offer" : s.secretUnderBarPhase,
       };
     });
   }, []);
@@ -880,6 +1039,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
     choosePostBar,
     chooseFoodOption,
     acknowledgePekinBar,
+    chooseBitwyPath,
+    confirmBitwyKitchenShot,
+    listenToSkiba,
+    advanceBitwy,
+    stopBalance,
   };
 
   return <GameCtx.Provider value={value}>{children}</GameCtx.Provider>;

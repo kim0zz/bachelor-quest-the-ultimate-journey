@@ -7,6 +7,7 @@ import { QuestModal } from "@/components/QuestModal";
 import { StatusBurst } from "@/components/StatusBurst";
 import { FinalVerdict } from "@/components/FinalVerdict";
 import { SecretUnderBarTv } from "@/components/SecretUnderBar";
+import { BitwyTv } from "@/components/Bitwy";
 import { RealtimeIndicator } from "@/components/RealtimeIndicator";
 
 export const Route = createFileRoute("/tv")({
@@ -149,6 +150,7 @@ function TvInner() {
       <QuestModal />
       <StatusBurst />
       <SecretUnderBarTv />
+      <BitwyTv />
       <PostBarOverlay />
       <PekinBarOverlay />
       <PekinTransitionOverlay />
