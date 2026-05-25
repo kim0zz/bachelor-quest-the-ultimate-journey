@@ -50,6 +50,45 @@ function PostBarOverlay() {
   );
 }
 
+function PekinBarOverlay() {
+  const { state } = useGame();
+  if (state.foodPhase !== "pekin-event") return null;
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-30 flex items-center justify-center bg-black/90 backdrop-blur-md p-6"
+      >
+        <motion.div
+          initial={{ scale: 0.85, y: 30 }}
+          animate={{ scale: 1, y: 0 }}
+          className="w-full max-w-5xl rounded-3xl border-2 border-rose-400 bg-gradient-to-br from-rose-950 to-slate-950 p-10 text-center shadow-[0_0_100px_rgba(244,63,94,0.6)]"
+        >
+          <p className="text-xl italic text-white/60 mb-6">
+            Lama rusza do Pekin Baru. Przez chwilę czuć wspomnienia, sos i czasy, których już nie da się odzyskać.
+          </p>
+          <motion.h2
+            initial={{ scale: 0.5, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.3, type: "spring", stiffness: 120 }}
+            className="text-5xl font-black text-rose-300 drop-shadow-[0_0_40px_rgba(244,63,94,0.7)]"
+          >
+            PEKIN BAR ZOSTAŁ SPRZEDANY PRZEZ CHIŃCZYKÓW
+          </motion.h2>
+          <p className="mt-6 text-2xl text-white/80">
+            Niech mu ziemia lekką będzie. Wszyscy walą shota za pamięć Pekin Baru. 🍺
+          </p>
+          <p className="mt-8 text-lg text-white/50">
+            Kontynuuj na kontrolerze 📱
+          </p>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
 function TvInner() {
   const { state, realtimeStatus, roomCode } = useGame();
   return (
@@ -82,6 +121,7 @@ function TvInner() {
       <StatusBurst />
       <SecretUnderBarTv />
       <PostBarOverlay />
+      <PekinBarOverlay />
       {state.finalShown && <FinalVerdict />}
     </div>
   );

@@ -35,6 +35,8 @@ export function createInitialGameState() {
     earlyGamePhase: "choosing-bar" as "choosing-bar" | "post-bar-choice" | null,
     bartenderPhase: null as "intro" | "outcome" | null,
     bartenderChoiceIndex: null as number | null,
+    // Food stage (after bars)
+    foodPhase: null as "choosing" | "pekin-event" | "pekin-aftermath" | null,
     ...emptyPourState(),
   };
 }

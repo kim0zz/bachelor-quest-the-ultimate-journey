@@ -56,6 +56,7 @@ function evaluatePourState(s: GameState, level: number, loc: Location) {
 export type SecretUnderBarPhase = "offer" | "entry" | "reveal";
 export type EarlyGamePhase = "choosing-bar" | "post-bar-choice" | null;
 export type BartenderPhase = "intro" | "outcome" | null;
+export type FoodPhase = "choosing" | "pekin-event" | "pekin-aftermath" | null;
 
 export type StatusKind =
   | "idle"
@@ -97,6 +98,7 @@ export interface GameState {
   earlyGamePhase: EarlyGamePhase;
   bartenderPhase: BartenderPhase;
   bartenderChoiceIndex: number | null;
+  foodPhase: FoodPhase;
 }
 
 const STORAGE_KEY = "bachelor-quest-state-v3";
@@ -109,31 +111,32 @@ function shouldOfferSecretUnderBar(
   return !!getSecretUnderBarConfig(loc) && loc.id === MALE_PIWKO_ID;
 }
 
+const FOOD_NARRATOR =
+  "Po barach organizm Lamy zgłasza błąd krytyczny: brak cukru, brak godności, zbyt dużo decyzji. Czas coś zjeść.";
+
 /** Determine post-bar state after a bar quest and/or secret finishes. */
-function resolvePostBar(s: GameState): Pick<GameState, "earlyGamePhase" | "status"> {
+function resolvePostBar(s: GameState): Pick<GameState, "earlyGamePhase" | "status" | "foodPhase"> {
   if (s.earlyGamePhase !== "choosing-bar") {
-    return { earlyGamePhase: s.earlyGamePhase, status: { kind: "idle", message: "Wybierz lokację" } };
+    return { earlyGamePhase: s.earlyGamePhase, foodPhase: s.foodPhase, status: { kind: "idle", message: "Wybierz lokację" } };
   }
   const hansOk = s.completedIds.includes("hans");
   const mpOk = s.completedIds.includes("male-piwko");
   if (hansOk && mpOk) {
     return {
       earlyGamePhase: null,
-      status: {
-        kind: "idle",
-        message:
-          "Decyzja fatalna, czyli zgodna z charakterem postaci. Dwa bary zaliczone. Organizm złożył wniosek o urlop.",
-      },
+      foodPhase: "choosing",
+      status: { kind: "idle", message: FOOD_NARRATOR },
     };
   }
   if (hansOk || mpOk) {
     const msg = hansOk
       ? "Teoretycznie można iść dalej. Praktycznie Lama zobaczył Małe Piwko na mapie i jego mózg uznał to za quest obowiązkowy."
       : "Po Małym Piwku normalny człowiek szukałby wody. Lama dostał na mapie Hansa i potraktował to jak zaproszenie od losu.";
-    return { earlyGamePhase: "post-bar-choice", status: { kind: "idle", message: msg } };
+    return { earlyGamePhase: "post-bar-choice", foodPhase: null, status: { kind: "idle", message: msg } };
   }
   return {
     earlyGamePhase: "choosing-bar",
+    foodPhase: null,
     status: { kind: "idle", message: "Pierwszy etap przygotowań do ślubu: wybrać, gdzie się nakurwić." },
   };
 }
@@ -186,6 +189,8 @@ interface Ctx {
   chooseBartenderOption: (index: number) => void;
   continuePastBartender: () => void;
   choosePostBar: (goToOtherBar: boolean) => void;
+  chooseFoodOption: (option: "pekin" | "gofer") => void;
+  acknowledgePekinBar: () => void;
 }
 
 const GameCtx = createContext<Ctx | null>(null);
@@ -238,7 +243,17 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (state.earlyGamePhase === "post-bar-choice") {
       return [];
     }
-    // Linear progression after bar section
+    // Food choice: show both food destinations on the map
+    if (state.foodPhase === "choosing") {
+      return locations.filter(
+        (l) => l.id === "pekin-bar" || l.id === "gofer-przy-latarni",
+      );
+    }
+    // Other food phases (event/aftermath): no selectable locations
+    if (state.foodPhase) {
+      return [];
+    }
+    // Linear progression after bar+food section
     const nextMain = UNLOCK_ORDER.find(
       (id) => !state.completedIds.includes(id),
     );
@@ -251,25 +266,57 @@ export function GameProvider({ children }: { children: ReactNode }) {
       if ((BAR_IDS as readonly string[]).includes(l.id)) return false;
       return l.id === nextMain;
     });
-  }, [state.completedIds, state.earlyGamePhase, locations]);
+  }, [state.completedIds, state.earlyGamePhase, state.foodPhase, locations]);
 
   const goToLocation = useCallback(
     (id: string) => {
       const loc = locations.find((l) => l.id === id);
       if (!loc) return;
-      const hasBartender = !!loc.bartenderDialogue;
-      setState((s) => ({
-        ...s,
-        currentLocationId: id,
-        activeQuestId: id,
-        riskPhase: loc.type === "risk" ? "intro" : null,
-        riskCountdownStart: null,
-        riskQuestionStart: null,
-        ...emptyPourState(),
-        bartenderPhase: hasBartender ? "intro" : null,
-        bartenderChoiceIndex: null,
-        status: { kind: "questActive", message: `Quest: ${loc.name}` },
-      }));
+      setState((s) => {
+        // During food choice, intercept food destinations
+        if (s.foodPhase === "choosing") {
+          if (id === "pekin-bar") {
+            return {
+              ...s,
+              foodPhase: "pekin-event" as const,
+              currentLocationId: "pekin-bar",
+              status: {
+                kind: "idle" as const,
+                message: "PEKIN BAR ZOSTAŁ SPRZEDANY PRZEZ CHIŃCZYKÓW",
+              },
+            };
+          }
+          if (id === "gofer-przy-latarni") {
+            const hasBartender = !!loc.bartenderDialogue;
+            return {
+              ...s,
+              foodPhase: null,
+              currentLocationId: "gofer-przy-latarni",
+              activeQuestId: "gofer-przy-latarni",
+              bartenderPhase: hasBartender ? ("intro" as const) : null,
+              bartenderChoiceIndex: null,
+              ...emptyPourState(),
+              riskPhase: null,
+              riskCountdownStart: null,
+              riskQuestionStart: null,
+              status: { kind: "questActive" as const, message: `Quest: ${loc.name}` },
+            };
+          }
+        }
+        const hasBartender = !!loc.bartenderDialogue;
+        return {
+          ...s,
+          currentLocationId: id,
+          activeQuestId: id,
+          riskPhase: loc.type === "risk" ? ("intro" as const) : null,
+          riskCountdownStart: null,
+          riskQuestionStart: null,
+          ...emptyPourState(),
+          bartenderPhase: hasBartender ? ("intro" as const) : null,
+          bartenderChoiceIndex: null,
+          status: { kind: "questActive" as const, message: `Quest: ${loc.name}` },
+        };
+      });
     },
     [locations],
   );
@@ -402,6 +449,25 @@ export function GameProvider({ children }: { children: ReactNode }) {
       if (s.secretUnderBarPhase === "offer") {
         return { ...s, status: { kind: "idle", message: "Decyzja na kontrolerze 📱" } };
       }
+      // After Pekin Bar team shot, auto-route to GOFER
+      if (s.foodPhase === "pekin-aftermath") {
+        const goferLoc = LOCATIONS.find((l) => l.id === "gofer-przy-latarni");
+        if (goferLoc) {
+          return {
+            ...s,
+            foodPhase: null,
+            currentLocationId: "gofer-przy-latarni",
+            activeQuestId: "gofer-przy-latarni",
+            bartenderPhase: goferLoc.bartenderDialogue ? "intro" : null,
+            bartenderChoiceIndex: null,
+            ...emptyPourState(),
+            riskPhase: null,
+            riskCountdownStart: null,
+            riskQuestionStart: null,
+            status: { kind: "questActive" as const, message: `Quest: ${goferLoc.name}` },
+          };
+        }
+      }
       // After a bar quest, check if we need to offer the second bar
       if (s.earlyGamePhase === "choosing-bar") {
         const pb = resolvePostBar(s);
@@ -455,9 +521,62 @@ export function GameProvider({ children }: { children: ReactNode }) {
       return {
         ...s,
         earlyGamePhase: null,
+        foodPhase: "choosing" as const,
+        status: { kind: "idle" as const, message: FOOD_NARRATOR },
+      };
+    });
+  }, []);
+
+  // ── Food choice (Pekin Bar / Gofer) ──
+  const chooseFoodOption = useCallback(
+    (option: "pekin" | "gofer") => {
+      if (option === "pekin") {
+        setState((s) => {
+          if (s.foodPhase !== "choosing") return s;
+          return {
+            ...s,
+            foodPhase: "pekin-event" as const,
+            status: {
+              kind: "idle" as const,
+              message: "PEKIN BAR ZOSTAŁ SPRZEDANY PRZEZ CHIŃCZYKÓW",
+            },
+          };
+        });
+      } else {
+        const loc = locations.find((l) => l.id === "gofer-przy-latarni");
+        if (!loc) return;
+        const hasBartender = !!loc.bartenderDialogue;
+        setState((s) => {
+          if (s.foodPhase !== "choosing") return s;
+          return {
+            ...s,
+            foodPhase: null,
+            currentLocationId: "gofer-przy-latarni",
+            activeQuestId: "gofer-przy-latarni",
+            bartenderPhase: hasBartender ? ("intro" as const) : null,
+            bartenderChoiceIndex: null,
+            ...emptyPourState(),
+            riskPhase: null,
+            riskCountdownStart: null,
+            riskQuestionStart: null,
+            status: { kind: "questActive" as const, message: `Quest: ${loc.name}` },
+          };
+        });
+      }
+    },
+    [locations],
+  );
+
+  const acknowledgePekinBar = useCallback(() => {
+    setState((s) => {
+      if (s.foodPhase !== "pekin-event") return s;
+      return {
+        ...s,
+        foodPhase: "pekin-aftermath" as const,
+        teamShots: s.teamShots + 1,
         status: {
-          kind: "idle",
-          message: "Niepokojący przebłysk rozsądku. Zanotowano, ale nie przywiązujemy się.",
+          kind: "teamDrinks" as const,
+          message: "Wszyscy walą shota za pamięć Pekin Baru. 🍺",
         },
       };
     });
@@ -727,6 +846,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
     chooseBartenderOption,
     continuePastBartender,
     choosePostBar,
+    chooseFoodOption,
+    acknowledgePekinBar,
   };
 
   return <GameCtx.Provider value={value}>{children}</GameCtx.Provider>;

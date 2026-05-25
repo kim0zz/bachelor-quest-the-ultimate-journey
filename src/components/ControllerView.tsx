@@ -24,6 +24,7 @@ export function ControllerView() {
     chooseBartenderOption,
     continuePastBartender,
     choosePostBar,
+    acknowledgePekinBar,
   } = useGame();
 
   useTick(100);
@@ -145,11 +146,38 @@ export function ControllerView() {
               🚀 Idę dalej w stronę Las Vegas
             </motion.button>
           </div>
+        ) : state.foodPhase === "pekin-event" ? (
+          /* ── Pekin Bar dramatic event ── */
+          <div className="space-y-3">
+            <div className="rounded-2xl border-2 border-rose-400 bg-rose-600/15 p-5 text-center">
+              <p className="text-sm italic text-white/60 mb-3">
+                Lama rusza do Pekin Baru. Przez chwilę czuć wspomnienia, sos i czasy, których już nie da się odzyskać.
+              </p>
+              <p className="text-2xl font-black text-rose-300">
+                PEKIN BAR ZOSTAŁ SPRZEDANY PRZEZ CHIŃCZYKÓW
+              </p>
+              <p className="mt-3 text-sm text-white/70">
+                Niech mu ziemia lekką będzie. Wszyscy walą shota za pamięć Pekin Baru.
+              </p>
+            </div>
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={acknowledgePekinBar}
+              className="w-full rounded-2xl bg-rose-600 p-6 text-2xl font-black uppercase"
+            >
+              🍺 Za Pekin Bar! →
+            </motion.button>
+          </div>
         ) : !activeQuest ? (
           <>
             {state.earlyGamePhase === "choosing-bar" && (
               <div className="mb-4 rounded-xl border border-fuchsia-400/40 bg-fuchsia-500/10 p-3 text-center text-sm italic text-fuchsia-200">
                 Pierwszy etap przygotowań do ślubu: wybrać, gdzie się nakurwić.
+              </div>
+            )}
+            {state.foodPhase === "choosing" && (
+              <div className="mb-4 rounded-xl border border-amber-400/40 bg-amber-500/10 p-3 text-center text-sm italic text-amber-200">
+                🍽️ Czas coś zjeść. Wybierz gdzie.
               </div>
             )}
             <div className="mb-3 text-xs uppercase tracking-widest text-white/50">

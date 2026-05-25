@@ -232,13 +232,69 @@ export const LOCATIONS: Location[] = [
     },
   },
   {
+    id: "pekin-bar",
+    name: "PEKIN BAR",
+    shortName: "PEKIN",
+    description:
+      "Legenda gastronomii. Opcja dla ludzi, którzy nie pogodzili się z rzeczywistością.",
+    x: 34,
+    y: 36,
+    type: "start",
+    locked: false,
+    icon: "🥡",
+    pointsForSuccess: 0,
+    rewardText: "",
+    penaltyText: "",
+  },
+  {
+    id: "gofer-przy-latarni",
+    name: "GOFER PRZY LATARNI",
+    shortName: "GOFER",
+    description:
+      "Bezpieczna przystań po barach. Ada, cukier i klasyczne zamówienie Lamy.",
+    x: 34,
+    y: 58,
+    type: "quiz",
+    locked: true,
+    icon: "🧇",
+    pointsForSuccess: 10,
+    rewardText: "No widzisz, pamiętasz. Klasyk Lamy zatwierdzony. +10 Mąż Points!",
+    penaltyText:
+      "Okej, spokojnie. Zdarza się. Ale klasyczne zamówienie trzeba będzie odświeżyć. Lama pije.",
+    question: "Jaki smak lodów Lama zawsze bierze do gofra?",
+    answers: ["Wanilia", "Słony karmel", "Sex on the bitch", "Pistacja"],
+    correctAnswerIndex: 2,
+    bartenderDialogue: {
+      bartenderName: "Ada",
+      introLine:
+        "O, Lama! Dobrze cię widzieć. Jak się trzymasz? Wyglądasz, jakby dzień już zdążył trochę przyspieszyć.",
+      options: [
+        {
+          label: "Ada, ratuj. Muszę coś zjeść.",
+          outcomeLine:
+            "Jasne, spokojnie. Zaraz coś ogarniemy. Najpierw oddychaj, potem będziemy podejmować decyzje.",
+        },
+        {
+          label: "Jest dobrze, kontroluję sytuację.",
+          outcomeLine:
+            "To dobrze. Ale i tak dam ci coś słodkiego, bo czasem nawet bohaterowie potrzebują gofra.",
+        },
+        {
+          label: "Pytasz ogólnie czy o dziewczyny?",
+          outcomeLine:
+            "O wszystko. Ale zacznijmy od gofra, bo na rozmowy o dziewczynach trzeba mieć energię.",
+        },
+      ],
+    },
+  },
+  {
     id: "test-narzeczonej",
     name: "TEST NARZECZONEJ",
     shortName: "Test",
     description:
       "Egzamin z precyzji, odpowiedzialności i kontroli nad laniem.",
-    x: 42,
-    y: 55,
+    x: 48,
+    y: 48,
     type: "minigame",
     minigameType: "shotPour",
     locked: true,
@@ -265,8 +321,8 @@ export const LOCATIONS: Location[] = [
     shortName: "Strach",
     description:
       "Halloweenowy test pamięci. Tu nie ma miejsca na zgadywanie.",
-    x: 55,
-    y: 38,
+    x: 58,
+    y: 32,
     type: "quiz",
     locked: true,
     icon: "👻",
@@ -287,8 +343,8 @@ export const LOCATIONS: Location[] = [
     name: "Test Narzeczonej",
     shortName: "Narzecz.",
     description: "Egzamin z wiedzy o przyszłej żonie.",
-    x: 66,
-    y: 58,
+    x: 68,
+    y: 55,
     type: "quiz",
     locked: true,
     pointsForSuccess: 20,
@@ -308,8 +364,8 @@ export const LOCATIONS: Location[] = [
     name: "High Risk: Test Narzeczonej",
     shortName: "HIGH RISK",
     description: "Wysokie ryzyko, wysoka nagroda.",
-    x: 58,
-    y: 18,
+    x: 60,
+    y: 14,
     type: "risk",
     locked: false,
     pointsForSuccess: 25,
@@ -335,7 +391,7 @@ export const LOCATIONS: Location[] = [
     shortName: "Urząd",
     description: "Tu się składa podpis pod resztą życia.",
     x: 80,
-    y: 48,
+    y: 42,
     type: "challenge",
     locked: true,
     pointsForSuccess: 20,
@@ -360,8 +416,9 @@ export const LOCATIONS: Location[] = [
   },
 ];
 
-/** Linear unlock order AFTER bar section is resolved. */
+/** Linear unlock order AFTER bar+food section is resolved. */
 export const UNLOCK_ORDER: string[] = [
+  "gofer-przy-latarni",
   "test-narzeczonej",
   "dom-strachu",
   "narzeczona",
@@ -373,8 +430,12 @@ export const UNLOCK_ORDER: string[] = [
 export const MAP_CONNECTIONS: [string, string][] = [
   ["konopa", "hans"],
   ["konopa", "male-piwko"],
-  ["hans", "test-narzeczonej"],
-  ["male-piwko", "test-narzeczonej"],
+  ["hans", "pekin-bar"],
+  ["hans", "gofer-przy-latarni"],
+  ["male-piwko", "pekin-bar"],
+  ["male-piwko", "gofer-przy-latarni"],
+  ["pekin-bar", "gofer-przy-latarni"],
+  ["gofer-przy-latarni", "test-narzeczonej"],
   ["test-narzeczonej", "dom-strachu"],
   ["dom-strachu", "narzeczona"],
   ["narzeczona", "urzad"],
