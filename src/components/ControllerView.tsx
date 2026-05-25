@@ -25,6 +25,7 @@ export function ControllerView() {
     continuePastBartender,
     choosePostBar,
     acknowledgePekinBar,
+    closeStatus,
   } = useGame();
 
   useTick(100);
@@ -83,6 +84,13 @@ export function ControllerView() {
   const hansCompleted = state.completedIds.includes("hans");
   const mpCompleted = state.completedIds.includes("male-piwko");
 
+  const isFeedback =
+    !activeQuest &&
+    (state.status.kind === "correct" ||
+      state.status.kind === "wrong" ||
+      state.status.kind === "groomDrinks" ||
+      state.status.kind === "teamDrinks");
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-purple-950 to-slate-950 p-5 text-white">
       <header className="flex items-center justify-between">
@@ -122,28 +130,49 @@ export function ControllerView() {
         {state.secretUnderBarPhase ? (
           <SecretUnderBarController />
         ) : state.earlyGamePhase === "post-bar-choice" ? (
-          /* ── Post-bar: go to other bar or continue ── */
-          <div className="space-y-3">
-            <div className="rounded-2xl border-2 border-fuchsia-400/60 bg-black/50 p-4 text-center">
-              <p className="text-lg font-bold leading-snug text-white/90">
-                {state.status.message}
-              </p>
+          /* ── Post-bar: route decision cards ── */
+          <div className="space-y-4">
+            <div className="text-center">
+              <div className="text-xs uppercase tracking-[0.3em] text-fuchsia-300">
+                🗺️ Decyzja
+              </div>
+              <h3 className="mt-1 text-2xl font-black">CO DALEJ?</h3>
             </div>
             <motion.button
               whileTap={{ scale: 0.97 }}
-              onClick={() => choosePostBar(true)}
-              className="w-full rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-amber-600/60 to-fuchsia-600/60 p-6 text-xl font-black uppercase shadow-lg"
+              onClick={() => choosePostBar(false)}
+              className="flex w-full items-start gap-4 rounded-2xl border-2 border-fuchsia-400 bg-gradient-to-r from-fuchsia-600/30 to-purple-600/30 p-5 text-left shadow-lg"
             >
-              {hansCompleted && !mpCompleted
-                ? "🍺 Jeszcze Małe Piwko"
-                : "🎂 Jeszcze Hans"}
+              <span className="mt-1 text-3xl">🎰</span>
+              <div>
+                <div className="text-xl font-black">Idę dalej</div>
+                <div className="text-sm text-white/60">
+                  {hansCompleted && !mpCompleted
+                    ? "Niepokojący przebłysk rozsądku."
+                    : "Już wystarczy patologii."}
+                </div>
+              </div>
             </motion.button>
             <motion.button
               whileTap={{ scale: 0.97 }}
-              onClick={() => choosePostBar(false)}
-              className="w-full rounded-2xl border-2 border-white/30 bg-white/5 p-5 text-lg font-bold uppercase"
+              onClick={() => choosePostBar(true)}
+              className="flex w-full items-start gap-4 rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-amber-600/30 to-rose-600/30 p-5 text-left shadow-lg"
             >
-              🚀 Idę dalej w stronę Las Vegas
+              <span className="mt-1 text-3xl">
+                {hansCompleted && !mpCompleted ? "🍺" : "🍻"}
+              </span>
+              <div>
+                <div className="text-xl font-black">
+                  {hansCompleted && !mpCompleted
+                    ? "Jeszcze Małe Piwko"
+                    : "Jeszcze Hans"}
+                </div>
+                <div className="text-sm text-white/60">
+                  {hansCompleted && !mpCompleted
+                    ? "Co może pójść źle?"
+                    : "Nauka wymaga poświęceń."}
+                </div>
+              </div>
             </motion.button>
           </div>
         ) : state.foodPhase === "pekin-event" ? (
@@ -166,6 +195,64 @@ export function ControllerView() {
               className="w-full rounded-2xl bg-rose-600 p-6 text-2xl font-black uppercase"
             >
               🍺 Za Pekin Bar! →
+            </motion.button>
+          </div>
+        ) : state.foodPhase === "pekin-transition" ? (
+          /* ── Pekin → GOFER transition note ── */
+          <div className="space-y-3">
+            <div className="rounded-2xl border-2 border-amber-400/60 bg-black/50 p-5 text-center">
+              <p className="text-lg font-bold leading-snug text-white/90">
+                {state.status.message}
+              </p>
+            </div>
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={closeStatus}
+              className="w-full rounded-2xl bg-fuchsia-600 p-6 text-2xl font-black uppercase"
+            >
+              Dalej →
+            </motion.button>
+          </div>
+        ) : isFeedback ? (
+          /* ── Answer feedback ── */
+          <div className="space-y-4">
+            <div
+              className={`rounded-2xl border-2 p-5 text-center ${
+                state.status.kind === "correct" || state.status.kind === "teamDrinks"
+                  ? "border-emerald-400 bg-emerald-600/15"
+                  : "border-rose-400 bg-rose-600/15"
+              }`}
+            >
+              <div className="mb-3 text-4xl">
+                {state.status.kind === "correct"
+                  ? "✅"
+                  : state.status.kind === "teamDrinks"
+                    ? "🍻"
+                    : "❌"}
+              </div>
+              <p className="text-xl font-black text-white/90">
+                {state.status.kind === "correct"
+                  ? "DOBRZE!"
+                  : state.status.kind === "teamDrinks"
+                    ? "WSZYSCY PIJĄ!"
+                    : "ŹLE!"}
+              </p>
+              <p className="mt-3 text-base text-white/80">
+                {state.status.message}
+              </p>
+              {(state.status.kind === "groomDrinks" ||
+                state.status.kind === "wrong") && (
+                <p className="mt-2 text-lg font-bold text-rose-300">
+                  🥃 Lama pije
+                </p>
+              )}
+            </div>
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={closeStatus}
+              className="w-full rounded-2xl bg-fuchsia-600 p-6 text-2xl font-black uppercase"
+            >
+              Dalej →
             </motion.button>
           </div>
         ) : !activeQuest ? (
@@ -236,11 +323,6 @@ export function ControllerView() {
                       className="w-full rounded-2xl border-2 border-fuchsia-400/60 bg-fuchsia-600/30 p-5 text-left text-lg font-bold active:bg-fuchsia-500/40"
                     >
                       {opt.label}
-                      {(opt.bonusPoints ?? 0) > 0 && (
-                        <span className="ml-2 text-sm text-emerald-400">
-                          (+{opt.bonusPoints} Mąż)
-                        </span>
-                      )}
                     </motion.button>
                   ))}
                 </div>
@@ -262,12 +344,6 @@ export function ControllerView() {
                       </p>
                     </>
                   )}
-                  {state.bartenderChoiceIndex != null &&
-                    (bartender.options[state.bartenderChoiceIndex]?.bonusPoints ?? 0) > 0 && (
-                      <p className="mt-2 text-sm font-black text-emerald-400">
-                        +{bartender.options[state.bartenderChoiceIndex]?.bonusPoints} Mąż Points!
-                      </p>
-                    )}
                 </div>
                 <motion.button
                   whileTap={{ scale: 0.97 }}
@@ -302,9 +378,9 @@ export function ControllerView() {
 
             {!inBartender && activeQuest?.type === "quiz" && (
               <>
-                <div className="rounded-xl bg-white/5 p-4 text-lg font-bold">
+                <p className="mb-4 px-1 text-xl font-bold text-white/90">
                   {activeQuest.question}
-                </div>
+                </p>
                 <div className="grid gap-3">
                   {activeQuest.answers?.map((a, i) => (
                     <motion.button
@@ -325,9 +401,9 @@ export function ControllerView() {
 
             {!inBartender && activeQuest?.type === "challenge" && (
               <>
-                <div className="rounded-xl bg-white/5 p-4 text-lg font-bold">
+                <p className="mb-4 px-1 text-xl font-bold text-white/90">
                   {activeQuest.challengeText}
-                </div>
+                </p>
                 <button
                   onClick={() => resolveChallenge(true)}
                   className="w-full rounded-2xl bg-emerald-500 p-6 text-2xl font-black uppercase shadow-lg active:bg-emerald-400"
@@ -398,9 +474,9 @@ export function ControllerView() {
                   </div>
                   <div className="text-6xl">{riskRemaining}s</div>
                 </div>
-                <div className="rounded-xl bg-white/5 p-4 text-lg font-bold">
+                <p className="mb-4 px-1 text-xl font-bold text-white/90">
                   {activeQuest.question}
-                </div>
+                </p>
                 <div className="grid gap-3">
                   {activeQuest.answers?.map((a, i) => (
                     <motion.button

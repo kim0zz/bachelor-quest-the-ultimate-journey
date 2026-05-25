@@ -97,12 +97,6 @@ export function QuestModal() {
                       {bartender.bartenderName}: „{bartender.options[state.bartenderChoiceIndex]?.outcomeLine}"
                     </p>
                   )}
-                  {state.bartenderChoiceIndex != null &&
-                    (bartender.options[state.bartenderChoiceIndex]?.bonusPoints ?? 0) > 0 && (
-                      <p className="mt-4 text-xl font-black text-emerald-400">
-                        +{bartender.options[state.bartenderChoiceIndex]?.bonusPoints} Mąż Points!
-                      </p>
-                    )}
                   <p className="mt-6 text-lg text-white/50">
                     Kontynuuj na kontrolerze 📱
                   </p>

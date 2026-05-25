@@ -170,9 +170,9 @@ export const LOCATIONS: Location[] = [
           bonusPoints: 5,
         },
         {
-          label: "Najpierw test, potem alkohol.",
+          label: "Daj chwilę, muszę wejść w tryb Hansa.",
           outcomeLine:
-            "Lama, nie udawaj maturzysty. Ale dobra, sprawdzimy, czy pamiętasz coś więcej niż drogę do baru.",
+            "Tryb Hansa? Lama, ty tu nie wchodzisz w tryb. Ty się tu logujesz automatycznie.",
         },
       ],
     },

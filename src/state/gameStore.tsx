@@ -56,7 +56,7 @@ function evaluatePourState(s: GameState, level: number, loc: Location) {
 export type SecretUnderBarPhase = "offer" | "entry" | "reveal";
 export type EarlyGamePhase = "choosing-bar" | "post-bar-choice" | null;
 export type BartenderPhase = "intro" | "outcome" | null;
-export type FoodPhase = "choosing" | "pekin-event" | "pekin-aftermath" | null;
+export type FoodPhase = "choosing" | "pekin-event" | "pekin-aftermath" | "pekin-transition" | null;
 
 export type StatusKind =
   | "idle"
@@ -339,7 +339,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
           success && (opts?.teamShotOnSuccess ?? loc.teamShotOnSuccess)
             ? 1
             : 0;
-        const offerSecret = shouldOfferSecretUnderBar(loc, s);
         return {
           ...s,
           manPoints: s.manPoints + pts,
@@ -364,7 +363,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
                 message: opts?.statusMessage ?? loc.penaltyText,
               },
           finalShown: isFinal ? true : s.finalShown,
-          secretUnderBarPhase: offerSecret ? "offer" : s.secretUnderBarPhase,
           ...emptyPourState(),
         };
       });
@@ -449,8 +447,33 @@ export function GameProvider({ children }: { children: ReactNode }) {
       if (s.secretUnderBarPhase === "offer") {
         return { ...s, status: { kind: "idle", message: "Decyzja na kontrolerze 📱" } };
       }
-      // After Pekin Bar team shot, auto-route to GOFER
+      // After acknowledging quiz feedback, check if Secret Under Bar should be offered
+      if (
+        (s.status.kind === "correct" || s.status.kind === "groomDrinks") &&
+        !s.secretUnderBarCompleted &&
+        !s.secretUnderBarPhase &&
+        s.completedIds.includes(MALE_PIWKO_ID) &&
+        !!getSecretUnderBarConfig(LOCATIONS.find((l) => l.id === MALE_PIWKO_ID) ?? null)
+      ) {
+        return {
+          ...s,
+          secretUnderBarPhase: "offer" as const,
+          status: { kind: "idle" as const, message: "Decyzja na kontrolerze 📱" },
+        };
+      }
+      // After Pekin Bar team shot, show transition note
       if (s.foodPhase === "pekin-aftermath") {
+        return {
+          ...s,
+          foodPhase: "pekin-transition" as const,
+          status: {
+            kind: "idle" as const,
+            message: "Pekin Bar umarł, ale głód Lamy nie. Lama jednak idzie po gofra.",
+          },
+        };
+      }
+      // After transition note, route to GOFER
+      if (s.foodPhase === "pekin-transition") {
         const goferLoc = LOCATIONS.find((l) => l.id === "gofer-przy-latarni");
         if (goferLoc) {
           return {
@@ -458,7 +481,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
             foodPhase: null,
             currentLocationId: "gofer-przy-latarni",
             activeQuestId: "gofer-przy-latarni",
-            bartenderPhase: goferLoc.bartenderDialogue ? "intro" : null,
+            bartenderPhase: goferLoc.bartenderDialogue ? ("intro" as const) : null,
             bartenderChoiceIndex: null,
             ...emptyPourState(),
             riskPhase: null,
@@ -509,13 +532,22 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setState((s) => {
       if (s.earlyGamePhase !== "post-bar-choice") return s;
       if (goToOtherBar) {
+        const otherBarId = s.completedIds.includes("hans") ? "male-piwko" : "hans";
+        const otherBar = LOCATIONS.find((l) => l.id === otherBarId);
+        if (!otherBar) return s;
+        const hasBartender = !!otherBar.bartenderDialogue;
         return {
           ...s,
           earlyGamePhase: "choosing-bar" as const,
-          status: {
-            kind: "idle",
-            message: "Wybrałeś samodzielnie. Tak przynajmniej Ci się wydaje.",
-          },
+          currentLocationId: otherBarId,
+          activeQuestId: otherBarId,
+          bartenderPhase: hasBartender ? ("intro" as const) : null,
+          bartenderChoiceIndex: null,
+          ...emptyPourState(),
+          riskPhase: null,
+          riskCountdownStart: null,
+          riskQuestionStart: null,
+          status: { kind: "questActive" as const, message: `Quest: ${otherBar.name}` },
         };
       }
       return {

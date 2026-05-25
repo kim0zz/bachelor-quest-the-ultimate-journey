@@ -22,9 +22,7 @@ export function StatusBurst() {
         colors: ["#d946ef", "#22d3ee", "#facc15", "#10b981"],
       });
     }
-    const t = setTimeout(closeStatus, 3200);
-    return () => clearTimeout(t);
-  }, [show, kind, closeStatus, state.status.message]);
+  }, [show, kind, state.status.message]);
 
   const bg =
     kind === "correct"
@@ -44,7 +42,7 @@ export function StatusBurst() {
           animate={{ opacity: 1, ...shake }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          className="pointer-events-none fixed inset-0 z-40 flex items-center justify-center p-6"
+          className="fixed inset-0 z-40 flex flex-col items-center justify-center bg-black/60 p-6"
         >
           <motion.div
             initial={{ scale: 0.5, rotate: -6 }}
@@ -57,6 +55,12 @@ export function StatusBurst() {
               {state.status.message}
             </div>
           </motion.div>
+          <button
+            onClick={closeStatus}
+            className="mt-8 rounded-2xl bg-white/20 px-12 py-4 text-3xl font-black uppercase text-white backdrop-blur-sm transition-colors hover:bg-white/30"
+          >
+            Dalej →
+          </button>
         </motion.div>
       )}
     </AnimatePresence>

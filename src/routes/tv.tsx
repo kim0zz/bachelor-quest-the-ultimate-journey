@@ -50,6 +50,35 @@ function PostBarOverlay() {
   );
 }
 
+function PekinTransitionOverlay() {
+  const { state } = useGame();
+  if (state.foodPhase !== "pekin-transition") return null;
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-30 flex items-center justify-center bg-black/80 backdrop-blur-md p-6"
+      >
+        <motion.div
+          initial={{ scale: 0.85, y: 30 }}
+          animate={{ scale: 1, y: 0 }}
+          className="w-full max-w-5xl rounded-3xl border-2 border-amber-400 bg-gradient-to-br from-amber-950 to-slate-950 p-10 text-center shadow-[0_0_80px_rgba(251,191,36,0.4)]"
+        >
+          <div className="text-6xl mb-4">🧇</div>
+          <p className="mx-auto max-w-3xl text-3xl font-bold leading-relaxed text-white/90">
+            {state.status.message}
+          </p>
+          <p className="mt-8 text-lg text-white/50">
+            Kontynuuj na kontrolerze 📱
+          </p>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
 function PekinBarOverlay() {
   const { state } = useGame();
   if (state.foodPhase !== "pekin-event") return null;
@@ -122,6 +151,7 @@ function TvInner() {
       <SecretUnderBarTv />
       <PostBarOverlay />
       <PekinBarOverlay />
+      <PekinTransitionOverlay />
       {state.finalShown && <FinalVerdict />}
     </div>
   );
