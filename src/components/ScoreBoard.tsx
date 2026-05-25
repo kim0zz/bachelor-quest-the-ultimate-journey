@@ -43,7 +43,7 @@ export function ScoreBoard() {
         icon="💍"
       />
       <Stat
-        label="Shoty Pana Młodego"
+        label="Shoty Lamy"
         value={state.shotCount}
         color="border-amber-400 shadow-[0_0_30px_rgba(251,191,36,0.4)]"
         icon="🥃"

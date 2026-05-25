@@ -21,12 +21,13 @@ export function ControllerView() {
     answerRisk,
     failRisk,
     showFinal,
+    chooseBartenderOption,
+    continuePastBartender,
+    choosePostBar,
   } = useGame();
 
-  // Tick to update timers
   useTick(100);
 
-  // Drive risk phase transitions from the controller (single source of truth).
   useEffect(() => {
     if (!activeQuest || activeQuest.type !== "risk") return;
     if (state.riskPhase === "countdown" && state.riskCountdownStart) {
@@ -75,6 +76,12 @@ export function ControllerView() {
         )
       : 0;
 
+  const bartender = activeQuest?.bartenderDialogue;
+  const inBartender = !!bartender && state.bartenderPhase != null;
+
+  const hansCompleted = state.completedIds.includes("hans");
+  const mpCompleted = state.completedIds.includes("male-piwko");
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-purple-950 to-slate-950 p-5 text-white">
       <header className="flex items-center justify-between">
@@ -83,7 +90,7 @@ export function ControllerView() {
           <div className="text-xs uppercase tracking-widest text-fuchsia-300">
             Kontroler
           </div>
-          <div className="text-lg font-bold">Pan Młody</div>
+          <div className="text-lg font-bold">Lama 🦙</div>
         </div>
       </header>
 
@@ -113,8 +120,38 @@ export function ControllerView() {
       <div className="mt-5">
         {state.secretUnderBarPhase ? (
           <SecretUnderBarController />
+        ) : state.earlyGamePhase === "post-bar-choice" ? (
+          /* ── Post-bar: go to other bar or continue ── */
+          <div className="space-y-3">
+            <div className="rounded-2xl border-2 border-fuchsia-400/60 bg-black/50 p-4 text-center">
+              <p className="text-lg font-bold leading-snug text-white/90">
+                {state.status.message}
+              </p>
+            </div>
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={() => choosePostBar(true)}
+              className="w-full rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-amber-600/60 to-fuchsia-600/60 p-6 text-xl font-black uppercase shadow-lg"
+            >
+              {hansCompleted && !mpCompleted
+                ? "🍺 Jeszcze Małe Piwko"
+                : "🎂 Jeszcze Hans"}
+            </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={() => choosePostBar(false)}
+              className="w-full rounded-2xl border-2 border-white/30 bg-white/5 p-5 text-lg font-bold uppercase"
+            >
+              🚀 Idę dalej w stronę Las Vegas
+            </motion.button>
+          </div>
         ) : !activeQuest ? (
           <>
+            {state.earlyGamePhase === "choosing-bar" && (
+              <div className="mb-4 rounded-xl border border-fuchsia-400/40 bg-fuchsia-500/10 p-3 text-center text-sm italic text-fuchsia-200">
+                Pierwszy etap przygotowań do ślubu: wybrać, gdzie się nakurwić.
+              </div>
+            )}
             <div className="mb-3 text-xs uppercase tracking-widest text-white/50">
               Wybierz lokację
             </div>
@@ -151,7 +188,71 @@ export function ControllerView() {
           </>
         ) : (
           <div className="space-y-3">
-            {activeQuest && !isShotPourLocation(activeQuest) && (
+            {/* ── Bartender dialogue ── */}
+            {inBartender && bartender && state.bartenderPhase === "intro" && (
+              <>
+                <div className="rounded-2xl border-2 border-amber-400/60 bg-black/50 p-4 text-center">
+                  <div className="text-xs uppercase tracking-widest text-amber-300">
+                    🍺 {bartender.bartenderName}, barman
+                  </div>
+                  <p className="mt-2 text-base italic text-white/90">
+                    „{bartender.introLine}"
+                  </p>
+                </div>
+                <div className="grid gap-3">
+                  {bartender.options.map((opt, i) => (
+                    <motion.button
+                      key={i}
+                      whileTap={{ scale: 0.96 }}
+                      onClick={() => chooseBartenderOption(i)}
+                      className="w-full rounded-2xl border-2 border-fuchsia-400/60 bg-fuchsia-600/30 p-5 text-left text-lg font-bold active:bg-fuchsia-500/40"
+                    >
+                      {opt.label}
+                      {(opt.bonusPoints ?? 0) > 0 && (
+                        <span className="ml-2 text-sm text-emerald-400">
+                          (+{opt.bonusPoints} Mąż)
+                        </span>
+                      )}
+                    </motion.button>
+                  ))}
+                </div>
+              </>
+            )}
+            {inBartender && bartender && state.bartenderPhase === "outcome" && (
+              <>
+                <div className="rounded-2xl border-2 border-amber-400/60 bg-black/50 p-4 text-center">
+                  <div className="text-xs uppercase tracking-widest text-amber-300">
+                    🍺 {bartender.bartenderName}
+                  </div>
+                  {state.bartenderChoiceIndex != null && (
+                    <>
+                      <p className="mt-2 text-sm text-fuchsia-200">
+                        Lama: „{bartender.options[state.bartenderChoiceIndex]?.label}"
+                      </p>
+                      <p className="mt-3 text-base italic text-white/90">
+                        {bartender.bartenderName}: „{bartender.options[state.bartenderChoiceIndex]?.outcomeLine}"
+                      </p>
+                    </>
+                  )}
+                  {state.bartenderChoiceIndex != null &&
+                    (bartender.options[state.bartenderChoiceIndex]?.bonusPoints ?? 0) > 0 && (
+                      <p className="mt-2 text-sm font-black text-emerald-400">
+                        +{bartender.options[state.bartenderChoiceIndex]?.bonusPoints} Mąż Points!
+                      </p>
+                    )}
+                </div>
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={continuePastBartender}
+                  className="w-full rounded-2xl bg-fuchsia-600 p-6 text-2xl font-black uppercase"
+                >
+                  Dalej →
+                </motion.button>
+              </>
+            )}
+
+            {/* ── Normal quest content (after bartender or no bartender) ── */}
+            {!inBartender && activeQuest && !isShotPourLocation(activeQuest) && (
               <div className="rounded-2xl border-2 border-fuchsia-400 bg-black/50 p-4">
                 <div className="text-xs uppercase tracking-widest text-fuchsia-300">
                   Quest
@@ -160,18 +261,18 @@ export function ControllerView() {
               </div>
             )}
 
-            {activeQuest && isShotPourLocation(activeQuest) && (
+            {!inBartender && activeQuest && isShotPourLocation(activeQuest) && (
               <ShotPourMinigameController loc={activeQuest} />
             )}
 
-            {activeQuest?.type === "minigame" &&
+            {!inBartender && activeQuest?.type === "minigame" &&
               !isShotPourLocation(activeQuest) && (
                 <p className="text-center text-white/60">
                   Nieznana minigra.
                 </p>
               )}
 
-            {activeQuest?.type === "quiz" && (
+            {!inBartender && activeQuest?.type === "quiz" && (
               <>
                 <div className="rounded-xl bg-white/5 p-4 text-lg font-bold">
                   {activeQuest.question}
@@ -194,7 +295,7 @@ export function ControllerView() {
               </>
             )}
 
-            {activeQuest.type === "challenge" && (
+            {!inBartender && activeQuest?.type === "challenge" && (
               <>
                 <div className="rounded-xl bg-white/5 p-4 text-lg font-bold">
                   {activeQuest.challengeText}
@@ -214,7 +315,7 @@ export function ControllerView() {
               </>
             )}
 
-            {activeQuest.type === "risk" && state.riskPhase === "intro" && (
+            {activeQuest?.type === "risk" && state.riskPhase === "intro" && (
               <>
                 <div className="rounded-2xl border-2 border-amber-300 bg-gradient-to-br from-rose-600/40 to-amber-500/30 p-4 text-center">
                   <div className="text-2xl font-black uppercase tracking-widest text-amber-200">
@@ -244,7 +345,7 @@ export function ControllerView() {
               </>
             )}
 
-            {activeQuest.type === "risk" && state.riskPhase === "countdown" && (
+            {activeQuest?.type === "risk" && state.riskPhase === "countdown" && (
               <div className="rounded-2xl border-2 border-amber-300 bg-black/60 p-10 text-center">
                 <div className="text-sm uppercase tracking-widest text-amber-200">
                   Start za…
@@ -255,7 +356,7 @@ export function ControllerView() {
               </div>
             )}
 
-            {activeQuest.type === "risk" && state.riskPhase === "question" && (
+            {activeQuest?.type === "risk" && state.riskPhase === "question" && (
               <>
                 <div
                   className={`rounded-2xl border-2 p-4 text-center font-black tabular-nums ${
@@ -290,7 +391,7 @@ export function ControllerView() {
               </>
             )}
 
-            {activeQuest.type === "final" && (
+            {activeQuest?.type === "final" && (
               <button
                 onClick={showFinal}
                 className="w-full rounded-2xl bg-gradient-to-r from-amber-400 to-fuchsia-500 p-6 text-2xl font-black uppercase shadow-lg"

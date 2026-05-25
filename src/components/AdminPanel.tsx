@@ -88,7 +88,7 @@ export function AdminPanel() {
           <div className="grid grid-cols-2 gap-3">
             <Btn onClick={() => addPoints(5)}>+5 Mąż</Btn>
             <Btn onClick={() => addPoints(-5)} tone="danger">−5 Mąż</Btn>
-            <Btn onClick={addShot} tone="warn">+1 Shot PM</Btn>
+            <Btn onClick={addShot} tone="warn">+1 Shot Lama</Btn>
             <Btn onClick={addTeamShot} tone="warn">+1 Team Shot</Btn>
           </div>
         </section>

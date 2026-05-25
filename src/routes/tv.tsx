@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { AnimatePresence, motion } from "framer-motion";
 import { useGame } from "@/state/gameStore";
 import { MapView } from "@/components/MapView";
 import { ScoreBoard } from "@/components/ScoreBoard";
@@ -18,6 +19,37 @@ export const Route = createFileRoute("/tv")({
   component: TvInner,
 });
 
+function PostBarOverlay() {
+  const { state } = useGame();
+  if (state.earlyGamePhase !== "post-bar-choice") return null;
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-30 flex items-center justify-center bg-black/80 backdrop-blur-md p-6"
+      >
+        <motion.div
+          initial={{ scale: 0.85, y: 30 }}
+          animate={{ scale: 1, y: 0 }}
+          className="w-full max-w-5xl rounded-3xl border-2 border-fuchsia-400 bg-gradient-to-br from-purple-950 to-slate-950 p-10 text-center shadow-[0_0_80px_rgba(217,70,239,0.5)]"
+        >
+          <div className="text-sm uppercase tracking-[0.35em] text-fuchsia-300">
+            Co dalej?
+          </div>
+          <p className="mt-4 mx-auto max-w-3xl text-2xl leading-relaxed text-white/90">
+            {state.status.message}
+          </p>
+          <p className="mt-8 text-lg text-white/50">
+            Wybierz na kontrolerze 📱
+          </p>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
 function TvInner() {
   const { state, realtimeStatus, roomCode } = useGame();
   return (
@@ -30,7 +62,7 @@ function TvInner() {
             Bachelor Quest
           </div>
           <h1 className="text-5xl font-black drop-shadow-[0_2px_20px_rgba(217,70,239,0.5)]">
-            Droga do Małżeństwa
+            Droga Lamy do Małżeństwa
           </h1>
         </div>
         <ScoreBoard />
@@ -49,6 +81,7 @@ function TvInner() {
       <QuestModal />
       <StatusBurst />
       <SecretUnderBarTv />
+      <PostBarOverlay />
       {state.finalShown && <FinalVerdict />}
     </div>
   );

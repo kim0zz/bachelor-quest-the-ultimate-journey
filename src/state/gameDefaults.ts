@@ -1,4 +1,4 @@
-import { UNLOCK_ORDER, type PourResult } from "@/data/gameData";
+import { type PourResult } from "@/data/gameData";
 
 function emptyPourState() {
   return {
@@ -14,11 +14,15 @@ export function createInitialGameState() {
     manPoints: 0,
     shotCount: 0,
     teamShots: 0,
-    currentLocationId: UNLOCK_ORDER[0],
+    currentLocationId: "konopa",
     activeQuestId: null,
     completedIds: [] as string[],
     failedIds: [] as string[],
-    status: { kind: "idle" as const, message: "Wybierz lokację" },
+    status: {
+      kind: "idle" as const,
+      message:
+        "Lama budzi się na Konopie. Człowiek odpowiedzialny napiłby się wody i przemyślał życie. Lama ma na dziś inne plany.",
+    },
     finalShown: false,
     riskPhase: null,
     riskCountdownStart: null,
@@ -27,6 +31,10 @@ export function createInitialGameState() {
     secretUnderBarPhase: null,
     secretUnderBarShotsConfirmed: 0,
     secretShotPulse: 0,
+    // Early game (bar choice) flow
+    earlyGamePhase: "choosing-bar" as "choosing-bar" | "post-bar-choice" | null,
+    bartenderPhase: null as "intro" | "outcome" | null,
+    bartenderChoiceIndex: null as number | null,
     ...emptyPourState(),
   };
 }

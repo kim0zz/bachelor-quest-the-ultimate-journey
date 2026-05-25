@@ -5,7 +5,7 @@ export const Route = createFileRoute("/controller")({
   head: () => ({
     meta: [
       { title: "Controller — Bachelor Quest" },
-      { name: "description", content: "Kontroler dla Pana Młodego." },
+      { name: "description", content: "Kontroler Lamy." },
     ],
   }),
   component: ControllerView,

@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import {
+  BAR_IDS,
   LOCATIONS,
   MALE_PIWKO_ID,
   UNLOCK_ORDER,
@@ -53,6 +54,8 @@ function evaluatePourState(s: GameState, level: number, loc: Location) {
 }
 
 export type SecretUnderBarPhase = "offer" | "entry" | "reveal";
+export type EarlyGamePhase = "choosing-bar" | "post-bar-choice" | null;
+export type BartenderPhase = "intro" | "outcome" | null;
 
 export type StatusKind =
   | "idle"
@@ -80,7 +83,6 @@ export interface GameState {
   failedIds: string[];
   status: GameStatus;
   finalShown: boolean;
-  // Risk quest state
   riskPhase: RiskPhase;
   riskCountdownStart: number | null;
   riskQuestionStart: number | null;
@@ -92,6 +94,9 @@ export interface GameState {
   pourIsPouring: boolean;
   pourEvaluated: boolean;
   pourResult: PourResult | null;
+  earlyGamePhase: EarlyGamePhase;
+  bartenderPhase: BartenderPhase;
+  bartenderChoiceIndex: number | null;
 }
 
 const STORAGE_KEY = "bachelor-quest-state-v3";
@@ -102,6 +107,35 @@ function shouldOfferSecretUnderBar(
 ): boolean {
   if (s.secretUnderBarCompleted || s.secretUnderBarPhase) return false;
   return !!getSecretUnderBarConfig(loc) && loc.id === MALE_PIWKO_ID;
+}
+
+/** Determine post-bar state after a bar quest and/or secret finishes. */
+function resolvePostBar(s: GameState): Pick<GameState, "earlyGamePhase" | "status"> {
+  if (s.earlyGamePhase !== "choosing-bar") {
+    return { earlyGamePhase: s.earlyGamePhase, status: { kind: "idle", message: "Wybierz lokację" } };
+  }
+  const hansOk = s.completedIds.includes("hans");
+  const mpOk = s.completedIds.includes("male-piwko");
+  if (hansOk && mpOk) {
+    return {
+      earlyGamePhase: null,
+      status: {
+        kind: "idle",
+        message:
+          "Decyzja fatalna, czyli zgodna z charakterem postaci. Dwa bary zaliczone. Organizm złożył wniosek o urlop.",
+      },
+    };
+  }
+  if (hansOk || mpOk) {
+    const msg = hansOk
+      ? "Teoretycznie można iść dalej. Praktycznie Lama zobaczył Małe Piwko na mapie i jego mózg uznał to za quest obowiązkowy."
+      : "Po Małym Piwku normalny człowiek szukałby wody. Lama dostał na mapie Hansa i potraktował to jak zaproszenie od losu.";
+    return { earlyGamePhase: "post-bar-choice", status: { kind: "idle", message: msg } };
+  }
+  return {
+    earlyGamePhase: "choosing-bar",
+    status: { kind: "idle", message: "Pierwszy etap przygotowań do ślubu: wybrać, gdzie się nakurwić." },
+  };
 }
 
 function load(): GameState {
@@ -123,20 +157,16 @@ interface Ctx {
   availableLocations: Location[];
   currentLocation: Location;
   activeQuest: Location | null;
-  // controller
   goToLocation: (id: string) => void;
   answerQuiz: (index: number) => void;
   resolveChallenge: (success: boolean) => void;
-  // risk
   acceptRisk: () => void;
   escapeRisk: () => void;
   startRiskQuestion: () => void;
   answerRisk: (index: number) => void;
   failRisk: () => void;
-  // final
   showFinal: () => void;
   closeStatus: () => void;
-  // admin
   reset: () => void;
   addPoints: (n: number) => void;
   addShot: () => void;
@@ -153,6 +183,9 @@ interface Ctx {
   startPouring: () => void;
   stopPouring: () => void;
   acknowledgePourResult: () => void;
+  chooseBartenderOption: (index: number) => void;
+  continuePastBartender: () => void;
+  choosePostBar: (goToOtherBar: boolean) => void;
 }
 
 const GameCtx = createContext<Ctx | null>(null);
@@ -195,20 +228,36 @@ export function GameProvider({ children }: { children: ReactNode }) {
     : null;
 
   const availableLocations = useMemo(() => {
+    // Bar section: show uncompleted bars
+    if (state.earlyGamePhase === "choosing-bar") {
+      return locations.filter(
+        (l) => (BAR_IDS as readonly string[]).includes(l.id) && !state.completedIds.includes(l.id),
+      );
+    }
+    // Post-bar choice: no locations, UI handles the binary choice
+    if (state.earlyGamePhase === "post-bar-choice") {
+      return [];
+    }
+    // Linear progression after bar section
     const nextMain = UNLOCK_ORDER.find(
       (id) => !state.completedIds.includes(id),
     );
     return locations.filter((l) => {
       if (state.completedIds.includes(l.id)) return false;
-      if (l.type === "risk") return true;
+      if (l.type === "start") return false;
+      if (l.type === "risk") {
+        return state.completedIds.includes("test-narzeczonej");
+      }
+      if ((BAR_IDS as readonly string[]).includes(l.id)) return false;
       return l.id === nextMain;
     });
-  }, [state.completedIds, locations]);
+  }, [state.completedIds, state.earlyGamePhase, locations]);
 
   const goToLocation = useCallback(
     (id: string) => {
       const loc = locations.find((l) => l.id === id);
       if (!loc) return;
+      const hasBartender = !!loc.bartenderDialogue;
       setState((s) => ({
         ...s,
         currentLocationId: id,
@@ -217,6 +266,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
         riskCountdownStart: null,
         riskQuestionStart: null,
         ...emptyPourState(),
+        bartenderPhase: hasBartender ? "intro" : null,
+        bartenderChoiceIndex: null,
         status: { kind: "questActive", message: `Quest: ${loc.name}` },
       }));
     },
@@ -254,6 +305,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
           riskPhase: null,
           riskCountdownStart: null,
           riskQuestionStart: null,
+          bartenderPhase: null,
+          bartenderChoiceIndex: null,
           status: success
             ? {
                 kind: "correct",
@@ -289,7 +342,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
     [activeQuest, completeQuest],
   );
 
-  // Risk
   const acceptRisk = useCallback(() => {
     setState((s) => ({
       ...s,
@@ -346,13 +398,69 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, [activeQuest]);
 
   const closeStatus = useCallback(() => {
-    setState((s) => ({
-      ...s,
-      status:
-        s.secretUnderBarPhase === "offer"
-          ? { kind: "idle", message: "Decyzja na kontrolerze 📱" }
-          : { kind: "idle", message: "Wybierz lokację" },
-    }));
+    setState((s) => {
+      if (s.secretUnderBarPhase === "offer") {
+        return { ...s, status: { kind: "idle", message: "Decyzja na kontrolerze 📱" } };
+      }
+      // After a bar quest, check if we need to offer the second bar
+      if (s.earlyGamePhase === "choosing-bar") {
+        const pb = resolvePostBar(s);
+        return { ...s, ...pb };
+      }
+      return { ...s, status: { kind: "idle", message: "Wybierz lokację" } };
+    });
+  }, []);
+
+  // ── Bartender dialogue ──
+  const chooseBartenderOption = useCallback(
+    (index: number) => {
+      setState((s) => {
+        if (s.bartenderPhase !== "intro" || !s.activeQuestId) return s;
+        const loc = locations.find((l) => l.id === s.activeQuestId);
+        if (!loc?.bartenderDialogue) return s;
+        const option = loc.bartenderDialogue.options[index];
+        if (!option) return s;
+        return {
+          ...s,
+          bartenderPhase: "outcome",
+          bartenderChoiceIndex: index,
+          manPoints: s.manPoints + (option.bonusPoints ?? 0),
+        };
+      });
+    },
+    [locations],
+  );
+
+  const continuePastBartender = useCallback(() => {
+    setState((s) => {
+      if (s.bartenderPhase !== "outcome") return s;
+      return { ...s, bartenderPhase: null };
+    });
+  }, []);
+
+  // ── Post-bar choice ──
+  const choosePostBar = useCallback((goToOtherBar: boolean) => {
+    setState((s) => {
+      if (s.earlyGamePhase !== "post-bar-choice") return s;
+      if (goToOtherBar) {
+        return {
+          ...s,
+          earlyGamePhase: "choosing-bar" as const,
+          status: {
+            kind: "idle",
+            message: "Wybrałeś samodzielnie. Tak przynajmniej Ci się wydaje.",
+          },
+        };
+      }
+      return {
+        ...s,
+        earlyGamePhase: null,
+        status: {
+          kind: "idle",
+          message: "Niepokojący przebłysk rozsądku. Zanotowano, ale nie przywiązujemy się.",
+        },
+      };
+    });
   }, []);
 
   const malePiwkoLoc =
@@ -360,13 +468,16 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const secretUnderBarConfig = getSecretUnderBarConfig(malePiwkoLoc);
 
   const secretContinueJourney = useCallback(() => {
-    setState((s) => ({
-      ...s,
-      secretUnderBarCompleted: true,
-      secretUnderBarPhase: null,
-      secretUnderBarShotsConfirmed: 0,
-      status: { kind: "idle", message: "Wybierz lokację" },
-    }));
+    setState((s) => {
+      const pb = resolvePostBar({ ...s, secretUnderBarCompleted: true, secretUnderBarPhase: null });
+      return {
+        ...s,
+        secretUnderBarCompleted: true,
+        secretUnderBarPhase: null,
+        secretUnderBarShotsConfirmed: 0,
+        ...pb,
+      };
+    });
   }, []);
 
   const secretChooseUnderBar = useCallback(() => {
@@ -415,13 +526,16 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, [secretUnderBarConfig]);
 
   const secretFinishReveal = useCallback(() => {
-    setState((s) => ({
-      ...s,
-      secretUnderBarCompleted: true,
-      secretUnderBarPhase: null,
-      secretUnderBarShotsConfirmed: 0,
-      status: { kind: "idle", message: "Wybierz lokację" },
-    }));
+    setState((s) => {
+      const pb = resolvePostBar({ ...s, secretUnderBarCompleted: true, secretUnderBarPhase: null });
+      return {
+        ...s,
+        secretUnderBarCompleted: true,
+        secretUnderBarPhase: null,
+        secretUnderBarShotsConfirmed: 0,
+        ...pb,
+      };
+    });
   }, []);
 
   const startPouring = useCallback(() => {
@@ -518,7 +632,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         (id) => !s.completedIds.includes(id) && id !== s.currentLocationId,
       );
       if (!nextId) return s;
-      return { ...s, currentLocationId: nextId, activeQuestId: null };
+      return { ...s, currentLocationId: nextId, activeQuestId: null, earlyGamePhase: null };
     });
   }, []);
   const forcePass = useCallback(() => {
@@ -538,6 +652,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
         completedIds,
         activeQuestId: null,
         riskPhase: null,
+        bartenderPhase: null,
+        bartenderChoiceIndex: null,
         ...emptyPourState(),
         status: { kind: "correct", message: loc.rewardText },
         secretUnderBarPhase: offerSecret ? "offer" : s.secretUnderBarPhase,
@@ -562,10 +678,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
         failedIds: [...s.failedIds, loc.id],
         activeQuestId: null,
         riskPhase: null,
+        bartenderPhase: null,
+        bartenderChoiceIndex: null,
         ...emptyPourState(),
         status: {
           kind: "groomDrinks",
-          message: loc.penaltyText || "PAN MŁODY PIJE",
+          message: loc.penaltyText || "LAMA PIJE",
         },
         secretUnderBarPhase: offerSecret ? "offer" : s.secretUnderBarPhase,
       };
@@ -606,6 +724,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
     startPouring,
     stopPouring,
     acknowledgePourResult,
+    chooseBartenderOption,
+    continuePastBartender,
+    choosePostBar,
   };
 
   return <GameCtx.Provider value={value}>{children}</GameCtx.Provider>;
@@ -617,7 +738,6 @@ export function useGame() {
   return ctx;
 }
 
-// Lightweight tick hook for re-rendering timers.
 export function useTick(intervalMs = 100) {
   const [, setT] = useState(0);
   useEffect(() => {

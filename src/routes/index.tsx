@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Bachelor Quest: Droga do Małżeństwa" },
+      { title: "Bachelor Quest: Droga Lamy do Małżeństwa" },
       {
         name: "description",
         content:
@@ -27,7 +27,7 @@ const modes = [
     to: "/controller",
     title: "Controller",
     icon: "📱",
-    desc: "Telefon Pana Młodego.",
+    desc: "Telefon Lamy.",
     cls: "from-cyan-500 to-blue-700 border-cyan-400",
   },
   {
@@ -60,7 +60,7 @@ function Home() {
           Bachelor <span className="text-fuchsia-400">Quest</span>
         </motion.h1>
         <p className="mt-4 text-xl text-white/70">
-          Droga do Małżeństwa — wybierz swój tryb gry.
+          Droga Lamy do Małżeństwa — wybierz swój tryb gry.
         </p>
 
         <div className="mt-12 grid gap-6 md:grid-cols-3">
@@ -84,8 +84,7 @@ function Home() {
         </div>
 
         <div className="mt-12 text-xs uppercase tracking-widest text-white/40">
-          Tip: otwórz /tv na laptopie, /controller na telefonie. Stan
-          synchronizuje się lokalnie przez localStorage (tymczasowo).
+          Tip: otwórz /tv na laptopie, /controller na telefonie Lamy.
         </div>
       </div>
     </div>

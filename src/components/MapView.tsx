@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { useGame } from "@/state/gameStore";
 import { GroomAvatar } from "./GroomAvatar";
-import type { Location } from "@/data/gameData";
+import { MAP_CONNECTIONS, type Location } from "@/data/gameData";
 
 function LocationPin({ loc }: { loc: Location }) {
   const { state, availableLocations } = useGame();
@@ -10,13 +10,15 @@ function LocationPin({ loc }: { loc: Location }) {
   const available = availableLocations.some((l) => l.id === loc.id);
   const isCurrent = state.currentLocationId === loc.id;
   const isRisk = loc.type === "risk";
+  const isStart = loc.type === "start";
 
   let ring = "border-white/20 bg-white/5";
+  if (isStart) ring = "border-cyan-300 bg-cyan-500/20";
   if (completed && !failed) ring = "border-emerald-400 bg-emerald-500/20";
   if (failed) ring = "border-rose-400 bg-rose-500/20";
   if (available && !isRisk)
     ring = "border-fuchsia-400 bg-fuchsia-500/20 animate-pulse";
-  if (isRisk && !completed)
+  if (isRisk && !completed && available)
     ring =
       "border-amber-300 bg-gradient-to-br from-rose-500/40 to-amber-400/40 animate-pulse shadow-[0_0_40px_rgba(251,191,36,0.9)]";
 
@@ -30,7 +32,9 @@ function LocationPin({ loc }: { loc: Location }) {
           ? "🎯"
           : loc.type === "challenge"
             ? "⚡"
-            : "⚠️");
+            : loc.type === "start"
+              ? "🏠"
+              : "⚠️");
 
   return (
     <div
@@ -75,24 +79,23 @@ export function MapView() {
         }}
       />
       <svg className="absolute inset-0 h-full w-full" preserveAspectRatio="none">
-        {locations
-          .filter((l) => l.type !== "risk")
-          .map((l, i, arr) => {
-            const next = arr[i + 1];
-            if (!next) return null;
-            return (
-              <line
-                key={l.id}
-                x1={`${l.x}%`}
-                y1={`${l.y}%`}
-                x2={`${next.x}%`}
-                y2={`${next.y}%`}
-                stroke="rgba(217,70,239,0.35)"
-                strokeWidth={3}
-                strokeDasharray="8 8"
-              />
-            );
-          })}
+        {MAP_CONNECTIONS.map(([fromId, toId]) => {
+          const from = locations.find((l) => l.id === fromId);
+          const to = locations.find((l) => l.id === toId);
+          if (!from || !to) return null;
+          return (
+            <line
+              key={`${fromId}-${toId}`}
+              x1={`${from.x}%`}
+              y1={`${from.y}%`}
+              x2={`${to.x}%`}
+              y2={`${to.y}%`}
+              stroke="rgba(217,70,239,0.35)"
+              strokeWidth={3}
+              strokeDasharray="8 8"
+            />
+          );
+        })}
       </svg>
 
       {locations.map((l) => (

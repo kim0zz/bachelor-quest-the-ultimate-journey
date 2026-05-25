@@ -26,6 +26,9 @@ export function QuestModal() {
         )
       : 0;
 
+  const bartender = activeQuest?.bartenderDialogue;
+  const inBartender = !!bartender && state.bartenderPhase != null;
+
   return (
     <AnimatePresence>
       {activeQuest && (
@@ -65,7 +68,49 @@ export function QuestModal() {
             </p>
 
             <div className="mt-8 rounded-2xl border border-white/10 bg-black/40 p-8">
-              {activeQuest.type === "quiz" && (
+              {/* ── Bartender dialogue ── */}
+              {inBartender && bartender && state.bartenderPhase === "intro" && (
+                <div className="text-center">
+                  <div className="mb-2 text-sm uppercase tracking-widest text-amber-300">
+                    🍺 {bartender.bartenderName}, barman
+                  </div>
+                  <p className="mx-auto max-w-3xl text-2xl italic text-white/90 leading-relaxed">
+                    „{bartender.introLine}"
+                  </p>
+                  <p className="mt-8 text-lg text-white/50">
+                    Odpowiedz na kontrolerze 📱
+                  </p>
+                </div>
+              )}
+              {inBartender && bartender && state.bartenderPhase === "outcome" && (
+                <div className="text-center">
+                  <div className="mb-2 text-sm uppercase tracking-widest text-amber-300">
+                    🍺 {bartender.bartenderName}, barman
+                  </div>
+                  {state.bartenderChoiceIndex != null && (
+                    <p className="text-lg text-fuchsia-200">
+                      Lama: „{bartender.options[state.bartenderChoiceIndex]?.label}"
+                    </p>
+                  )}
+                  {state.bartenderChoiceIndex != null && (
+                    <p className="mt-4 mx-auto max-w-3xl text-2xl italic text-white/90 leading-relaxed">
+                      {bartender.bartenderName}: „{bartender.options[state.bartenderChoiceIndex]?.outcomeLine}"
+                    </p>
+                  )}
+                  {state.bartenderChoiceIndex != null &&
+                    (bartender.options[state.bartenderChoiceIndex]?.bonusPoints ?? 0) > 0 && (
+                      <p className="mt-4 text-xl font-black text-emerald-400">
+                        +{bartender.options[state.bartenderChoiceIndex]?.bonusPoints} Mąż Points!
+                      </p>
+                    )}
+                  <p className="mt-6 text-lg text-white/50">
+                    Kontynuuj na kontrolerze 📱
+                  </p>
+                </div>
+              )}
+
+              {/* ── Normal quiz (after bartender or without) ── */}
+              {activeQuest.type === "quiz" && !inBartender && (
                 <>
                   <p className="text-3xl font-bold text-white">
                     {activeQuest.question}
@@ -88,22 +133,22 @@ export function QuestModal() {
                   </p>
                 </>
               )}
-              {isShotPourLocation(activeQuest) && (
+              {isShotPourLocation(activeQuest) && !inBartender && (
                 <ShotPourMinigameTv loc={activeQuest} />
               )}
               {activeQuest.type === "minigame" &&
-                !isShotPourLocation(activeQuest) && (
+                !isShotPourLocation(activeQuest) && !inBartender && (
                   <p className="text-center text-xl text-white/60">
                     Nieznana minigra — skontaktuj operatora.
                   </p>
                 )}
-              {activeQuest.type === "challenge" && (
+              {activeQuest.type === "challenge" && !inBartender && (
                 <>
                   <p className="text-3xl font-bold text-white">
                     {activeQuest.challengeText}
                   </p>
                   <p className="mt-6 text-center text-lg text-white/60">
-                    Operator/Pan młody potwierdza na kontrolerze 📱
+                    Operator/Lama potwierdza na kontrolerze 📱
                   </p>
                 </>
               )}
@@ -185,7 +230,7 @@ export function QuestModal() {
                     {activeQuest.finalText}
                   </p>
                   <p className="mt-6 text-center text-lg text-white/60">
-                    Kliknij „Pokaż werdykt” na kontrolerze 📱
+                    Kliknij „Pokaż werdykt" na kontrolerze 📱
                   </p>
                 </>
               )}
