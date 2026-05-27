@@ -96,23 +96,27 @@ export const GROOM_AVATAR_URL = GROOM.avatarUrl;
 export const VERDICTS: Verdict[] = [
   {
     minPoints: 0,
-    title: "Lama: jeszcze kawaler mentalnie",
-    subtitle: "Lama wymaga aktualizacji przed ślubem.",
+    title: "Lama przeżył, ale komisja ma pytania.",
+    subtitle:
+      "Dotarł do końca, co technicznie jest sukcesem. Styl pozostaje przedmiotem dochodzenia.",
   },
   {
-    minPoints: 20,
-    title: "Lama: materiał na męża",
-    subtitle: "Wersja beta, ale stabilna.",
+    minPoints: 26,
+    title: "Materiał na męża, wersja po aktualizacji.",
+    subtitle:
+      "System działa, choć czasem wymaga restartu, nawodnienia i nadzoru Marty.",
   },
   {
-    minPoints: 40,
-    title: "Lama gotowy do ślubu",
-    subtitle: "Certyfikowany Mąż Level Pro.",
+    minPoints: 51,
+    title: "Lama gotowy do ślubu. Organizm mniej.",
+    subtitle:
+      "Decyzje bywały tragiczne, ale serce jest po właściwej stronie.",
   },
   {
-    minPoints: 60,
-    title: "Lama: legenda małżeństwa",
-    subtitle: "Proszę polać ekipie.",
+    minPoints: 81,
+    title: "Legenda wieczoru.",
+    subtitle:
+      "Marta, odbiór techniczny zaliczony. Prosimy nie pytać organizmu o opinię.",
   },
 ];
 
@@ -306,67 +310,55 @@ export const LOCATIONS: Location[] = [
     name: "DREWNIAK",
     shortName: "DREWNIAK",
     description:
-      "Kolejny etap wyprawy Lamy. Szczegóły dopiszemy później.",
+      "Misja zaopatrzeniowa. Lama musi udowodnić, że potrafi kupić rzeczy potrzebne do dalszego niszczenia organizmu.",
     x: 58,
     y: 38,
     type: "quiz",
     locked: true,
-    icon: "🪵",
-    pointsForSuccess: 5,
-    rewardText: "Jakoś poszło. +5 Mąż Points.",
-    penaltyText: "Drewniak nie wybacza. Lama pije.",
-    question: "DREWNIAK — placeholder. Co robimy?",
+    icon: "🛒",
+    pointsForSuccess: 10,
+    rewardText:
+      "Lama wykazał się myśleniem strategicznym. Czteropak to dywersyfikacja, flacha to plan awaryjny. Tak działa odpowiedzialny logistyk weselny.",
+    penaltyText:
+      "DREWNIAK odmawia autoryzacji tych zakupów. To nie jest piknik, detoks ani rosół u babci. Lama pije za brak misji.",
+    question: "Co Lama kupuje w DREWNIAKU przed działką?",
     answers: [
-      "Idziemy dalej",
-      "Udajemy, że był plan",
-      "Szukamy szota",
-      "Wszystkie powyższe",
+      "Czteropak Harnolda i flachę",
+      "Płyn do spryskiwaczy i kabanosy",
+      "Piwo zero",
+      "Włoszczyznę",
     ],
-    correctAnswerIndex: 3,
+    correctAnswerIndex: 0,
   },
   {
     id: "dzialka",
     name: "DZIAŁKA",
     shortName: "DZIAŁKA",
-    description: "Etap działkowy. Jeszcze do rozpisania.",
+    description:
+      "Naturalne środowisko Lamy. ROD, basen, grill, Bluetooth speaker i decyzje, których regulamin nie przewidział.",
     x: 68,
     y: 52,
-    type: "quiz",
+    type: "challenge",
     locked: true,
-    icon: "🌲",
-    pointsForSuccess: 5,
-    rewardText: "Działka zaliczona. +5 Mąż Points.",
-    penaltyText: "Działka domaga się shota. Lama pije.",
-    question: "DZIAŁKA — placeholder. Co dalej?",
-    answers: [
-      "Grill",
-      "Ognisko",
-      "Shot z flaszki",
-      "Wszystko naraz",
-    ],
-    correctAnswerIndex: 3,
+    icon: "🏕️",
+    pointsForSuccess: 0,
+    rewardText: "",
+    penaltyText: "",
   },
   {
     id: "paryz",
     name: "PARYŻ",
     shortName: "PARYŻ",
-    description: "Tu później wrzucimy High Risk.",
+    description:
+      "Ciemny las, zła decyzja i coraz mniej argumentów za tym, żeby tu zostać.",
     x: 78,
     y: 36,
-    type: "quiz",
+    type: "challenge",
     locked: true,
-    icon: "🗼",
-    pointsForSuccess: 5,
-    rewardText: "Paryż podbity. +5 Mąż Points.",
-    penaltyText: "Paryż rozczarowany. Lama pije.",
-    question: "PARYŻ — placeholder. Jak się tu znaleźliśmy?",
-    answers: [
-      "Nikt nie wie",
-      "Lama tak chciał",
-      "GPS się zgubił",
-      "Los zdecydował",
-    ],
-    correctAnswerIndex: 1,
+    icon: "🌚",
+    pointsForSuccess: 0,
+    rewardText: "",
+    penaltyText: "",
   },
   {
     id: "risk-narzeczona",
@@ -396,18 +388,19 @@ export const LOCATIONS: Location[] = [
   },
   {
     id: "dom-zgon",
-    name: "DOM-ZGON",
-    shortName: "ZGON",
-    description: "Finałowa lokacja. Tu kończy się wyprawa.",
+    name: "DOM / KONOPA",
+    shortName: "DOM",
+    description: "Autopilot, zygzak i finałowy audyt zniszczeń.",
     x: 90,
     y: 30,
     type: "final",
     locked: true,
-    icon: "💀",
+    icon: "🏠",
     pointsForSuccess: 0,
     rewardText: "WERDYKT KOŃCOWY",
     penaltyText: "",
-    finalText: "Czas na ostateczny werdykt!",
+    finalText:
+      "Lama dociera na KONOPA na autopilocie. Szedł zygzakiem, ale dotarł. W jego stanie to już logistyka klasy premium.",
   },
 ];
 
@@ -434,6 +427,7 @@ export const MAP_CONNECTIONS: [string, string][] = [
   ["bitwy", "drewniak"],
   ["drewniak", "dzialka"],
   ["dzialka", "paryz"],
+  ["dzialka", "dom-zgon"],
   ["dzialka", "risk-narzeczona"],
   ["paryz", "dom-zgon"],
 ];
@@ -444,6 +438,71 @@ export const BALANCE_PERIOD_MS = 2500;
 export const BALANCE_TARGET_MIN = 42;
 export const BALANCE_TARGET_MAX = 58;
 export const BALANCE_POINTS = 10;
+
+export const POST_BITWY_TRANSITION_TEXT =
+  "BITWY powoli przechodzą z melanżu w oddział intensywnej drzemki. Ludzie leżą w pozycjach, których nie przewiduje anatomia. Lama patrzy na to wszystko i dochodzi do wniosku, że jest jeszcze niedopity. Melanż podobno kręci się dalej na działce, ale najpierw trzeba zrobić najważniejszą misję dorosłego człowieka: kupić alkohol w DREWNIAKU.";
+
+export const HULAJNOGA_DURATION_MS = 7000;
+export const HULAJNOGA_REQUIRED_CLICKS = 25;
+export const HULAJNOGA_POINTS = 15;
+
+export const DZIALKA_INTRO_PART1 =
+  "Lama dociera na działkę. Swoje naturalne środowisko. Z daleka już słychać, że muzyka napierdala, ktoś drze pizdę, ktoś pluska się w basenie, a gdzieś w oddali działkowcy zaczynają przeczuwać, że regulamin ROD właśnie traci kontrolę nad sytuacją.";
+
+export const DZIALKA_INTRO_PART2 =
+  "To nie jest zwykła działka. To jest miejsce, gdzie grill, basen i Bluetooth speaker potrafią stworzyć problemy większe niż zebranie zarządu.";
+
+export const DZIALKA_RANDOM_LINE =
+  "Przelizalem kilku kolegów i nie żałuję tego";
+
+export const DZIALKA_RAP = {
+  narratorBefore:
+    "Na działce jest już pełna pizda. Wszyscy śpiewają rap, jakby od tego zależała stabilność wszechświata. Z głośników leci Paktofonika. Lama chce wejść w wers, ale jest już na etapie, gdzie nie wiadomo, czy pamięta tekst, czy tylko pamięta emocje.",
+  lyricFragment:
+    "Balansem w naturze, równowagi korekta\nUnoszę się ponadto na specjalnych efektach\nCel, S, M, O, K na kartki biel",
+  question: "Co Lama powinien zaśpiewać dalej?",
+  answers: [
+    "A, M, B, L, O, K, E, J, B, E, L",
+    "A, N, B, L, O, K, E, J, B, E, R",
+    "A, N, B, L, O, K, E, J, B, E, L",
+    "A, N, B, L, O, G, E, J, B, E, L",
+  ],
+  correctAnswerIndex: 2,
+  successNarrator:
+    "Lama wchodzi czysto. Działka na moment milknie z szacunku, co samo w sobie jest wydarzeniem historycznym.",
+  successFeedback:
+    "Lama łapie podjarkę, wznosi toast i wszyscy oprócz Lamy walą shota.",
+  failureNarrator:
+    "Lama gubi wers i próbuje ratować sytuację pewnością siebie. Niestety pewność siebie nie rymuje się z Paktofoniką.",
+  failureFeedback: "Lama pije za profanację klasyka.",
+};
+
+export const DZIALKA_FINAL_NARRATOR1 =
+  "Po występie Lama jest już nakurwiony na poziomie, na którym człowiek zaczyna uznawać złe pomysły za logiczne rozwinięcie fabuły.";
+
+export const DZIALKA_FINAL_NARRATOR2 =
+  "Melanż na działce niby trwa, regulamin ROD niby jeszcze istnieje, ale przed Lamą pojawia się najważniejsze pytanie wieczoru: kończyć z godnością, czy odpalić tryb legendy?";
+
+export const PARYZ_INTRO_1 =
+  "PARYŻ. Nazwa brzmi romantycznie, ale w praktyce to ciemny las i bardzo dużo pytań bez odpowiedzi. Lama stoi między drzewami, odpala szluga i sam nie wie, na chuj tu przyszedł.";
+
+export const PARYZ_INTRO_2 =
+  "Jest ciemno, zimno, a jego organizm zaczyna wysyłać maile z wypowiedzeniem. Lama narzeka, że ma pizdę, ale oczywiście zamiast wracać, rozważa dalsze decyzje.";
+
+export const PARYZ_VOMIT_TEXT =
+  "Lama wali shota w lesie, bo najwyraźniej fabuła nie miała jeszcze dość. Po chwili organizm składa reklamację ustną i Lama się rzyga.";
+
+export const PARYZ_SLEEP_TEXT =
+  "Lama robi kolejny krok w stronę legendy i trzy kroki w stronę gleby. Po wszystkim zasypia na pół godziny jak nieautoryzowana aktualizacja systemu.";
+
+export const PARYZ_WAKE_TEXT =
+  "Lama budzi się w szoku. Przez chwilę nie wie, czy jest w Paryżu, lesie, czy w konsekwencjach własnych wyborów.";
+
+export const PARYZ_ESCAPE_TRANSITION =
+  "Lama uruchamia autopilota. Idzie zygzakiem, ale z jakiegoś powodu każdy zyg i każdy zak prowadzą go bliżej KONOPA.";
+
+export const DOM_DIRECT_TRANSITION =
+  "Lama odpala autopilota. Szedł zygzakiem, ale dotarł. W jego stanie to już logistyka klasy premium.";
 
 export function getBalancePosition(startTime: number): number {
   const elapsed = Date.now() - startTime;

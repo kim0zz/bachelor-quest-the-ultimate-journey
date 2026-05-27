@@ -17,6 +17,15 @@ import {
   BALANCE_TARGET_MIN,
   BALANCE_TARGET_MAX,
   BALANCE_POINTS,
+  POST_BITWY_TRANSITION_TEXT,
+  HULAJNOGA_DURATION_MS,
+  HULAJNOGA_REQUIRED_CLICKS,
+  HULAJNOGA_POINTS,
+  DZIALKA_RAP,
+  PARYZ_VOMIT_TEXT,
+  PARYZ_SLEEP_TEXT,
+  PARYZ_ESCAPE_TRANSITION,
+  DOM_DIRECT_TRANSITION,
   evaluatePourLevel,
   getSecretUnderBarConfig,
   isShotPourLocation,
@@ -73,6 +82,35 @@ export type BitwyPhase =
   | "complete"
   | null;
 
+export type PostBitwyPhase = "transition" | null;
+
+export type PostDrewniakPhase =
+  | "hulajnoga-choice"
+  | "hulajnoga-skip-narrator"
+  | "hulajnoga-running"
+  | "hulajnoga-result"
+  | null;
+
+export type HulajnogaResult = "success" | "fail" | null;
+
+export type DzialkaPhase =
+  | "intro"
+  | "random"
+  | "rap"
+  | "rap-result"
+  | "final-choice"
+  | null;
+
+export type ParyzPhase =
+  | "intro"
+  | "choice-1"
+  | "vomit"
+  | "choice-2"
+  | "sleep"
+  | "choice-3"
+  | "marta-call"
+  | null;
+
 export type StatusKind =
   | "idle"
   | "questActive"
@@ -120,6 +158,126 @@ export interface GameState {
   bitwyKitchenBailed: boolean;
   balanceStartTime: number | null;
   balanceStopPosition: number | null;
+  postBitwyPhase: PostBitwyPhase;
+  postDrewniakPhase: PostDrewniakPhase;
+  hulajnogaStartedAt: number | null;
+  hulajnogaClicks: number;
+  hulajnogaResult: HulajnogaResult;
+  dzialkaPhase: DzialkaPhase;
+  paryzPhase: ParyzPhase;
+  paryzCalledMarta: boolean;
+  paryzTookFirstShot: boolean;
+  paryzTookGroupShot: boolean;
+  paryzSleptInWoods: boolean;
+  sawPekinEvent: boolean;
+  bitwyBalanceSuccess: boolean;
+  bitwyHeardSkibaConfession: boolean;
+  hulajnogaSucceeded: boolean;
+  hulajnogaFailed: boolean;
+  dzialkaRapOutcome: "success" | "fail" | null;
+}
+
+function emptyHulajnogaState() {
+  return {
+    postDrewniakPhase: null as PostDrewniakPhase,
+    hulajnogaStartedAt: null as number | null,
+    hulajnogaClicks: 0,
+    hulajnogaResult: null as HulajnogaResult,
+  };
+}
+
+function applyHulajnogaResult(s: GameState, success: boolean): GameState {
+  if (s.hulajnogaResult) return s;
+  return {
+    ...s,
+    postDrewniakPhase: "hulajnoga-result",
+    hulajnogaResult: success ? "success" : "fail",
+    hulajnogaSucceeded: success ? true : s.hulajnogaSucceeded,
+    hulajnogaFailed: success ? s.hulajnogaFailed : true,
+    manPoints: s.manPoints + (success ? HULAJNOGA_POINTS : 0),
+    shotCount: success ? s.shotCount : s.shotCount + 1,
+    status: success
+      ? {
+          kind: "correct" as const,
+          message:
+            "Lama dojechał na działkę. Pojazd i godność w stanie akceptowalnym. +15 Mąż Points.",
+        }
+      : {
+          kind: "groomDrinks" as const,
+          message:
+            "Hulajnoga wygrała. Lama przeprowadził kontrolowane spotkanie z chodnikiem. Shot na ukojenie bólu.",
+        },
+  };
+}
+
+function startDzialkaQuest(s: GameState): GameState {
+  return {
+    ...s,
+    currentLocationId: "dzialka",
+    activeQuestId: "dzialka",
+    dzialkaPhase: "intro",
+    riskPhase: null,
+    riskCountdownStart: null,
+    riskQuestionStart: null,
+    bartenderPhase: null,
+    bartenderChoiceIndex: null,
+    ...emptyPourState(),
+    status: { kind: "idle" as const, message: "DZIAŁKA" },
+  };
+}
+
+function routeToDzialka(s: GameState): GameState {
+  return startDzialkaQuest({
+    ...s,
+    postBitwyPhase: null,
+    ...emptyHulajnogaState(),
+  });
+}
+
+function startParyzQuest(s: GameState): GameState {
+  return {
+    ...s,
+    currentLocationId: "paryz",
+    activeQuestId: "paryz",
+    paryzPhase: "intro",
+    dzialkaPhase: null,
+    riskPhase: null,
+    riskCountdownStart: null,
+    riskQuestionStart: null,
+    bartenderPhase: null,
+    bartenderChoiceIndex: null,
+    ...emptyPourState(),
+    status: { kind: "idle" as const, message: "PARYŻ" },
+  };
+}
+
+function routeToDomSummary(
+  s: GameState,
+  transitionMessage: string,
+  options?: { completeParyz?: boolean; clearParyz?: boolean },
+): GameState {
+  const completeParyz = options?.completeParyz ?? false;
+  const clearParyz = options?.clearParyz ?? true;
+  const completedIds = [...s.completedIds];
+  if (!completedIds.includes("dzialka")) completedIds.push("dzialka");
+  if (completeParyz && !completedIds.includes("paryz")) completedIds.push("paryz");
+  if (!completedIds.includes("dom-zgon")) completedIds.push("dom-zgon");
+  return {
+    ...s,
+    currentLocationId: "dom-zgon",
+    activeQuestId: null,
+    completedIds,
+    finalShown: true,
+    dzialkaPhase: null,
+    paryzPhase: clearParyz ? null : s.paryzPhase,
+    riskPhase: null,
+    riskCountdownStart: null,
+    riskQuestionStart: null,
+    bartenderPhase: null,
+    bartenderChoiceIndex: null,
+    ...emptyPourState(),
+    status: { kind: "final" as const, message: transitionMessage },
+  };
 }
 
 const STORAGE_KEY = "bachelor-quest-state-v3";
@@ -223,6 +381,17 @@ interface Ctx {
   listenToSkiba: () => void;
   advanceBitwy: () => void;
   stopBalance: () => void;
+  skipHulajnoga: () => void;
+  startHulajnoga: () => void;
+  hulajnogaClick: () => void;
+  advanceDzialka: () => void;
+  answerDzialkaRap: (index: number) => void;
+  chooseDzialkaRoute: (route: "paryz" | "dom-zgon") => void;
+  advanceParyz: () => void;
+  chooseParyzOption: (
+    option: "real-shot" | "group-shot" | "call-marta" | "go-home",
+  ) => void;
+  confirmParyzReturnHome: () => void;
 }
 
 const GameCtx = createContext<Ctx | null>(null);
@@ -285,6 +454,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (state.foodPhase) {
       return [];
     }
+    if (state.postBitwyPhase || state.postDrewniakPhase) {
+      return [];
+    }
+    if (state.dzialkaPhase) {
+      return [];
+    }
+    if (state.paryzPhase) {
+      return [];
+    }
     // Linear progression after bar+food section
     const nextMain = UNLOCK_ORDER.find(
       (id) => !state.completedIds.includes(id),
@@ -298,7 +476,16 @@ export function GameProvider({ children }: { children: ReactNode }) {
       if ((BAR_IDS as readonly string[]).includes(l.id)) return false;
       return l.id === nextMain;
     });
-  }, [state.completedIds, state.earlyGamePhase, state.foodPhase, locations]);
+  }, [
+    state.completedIds,
+    state.earlyGamePhase,
+    state.foodPhase,
+    state.postBitwyPhase,
+    state.postDrewniakPhase,
+    state.dzialkaPhase,
+    state.paryzPhase,
+    locations,
+  ]);
 
   const goToLocation = useCallback(
     (id: string) => {
@@ -350,9 +537,18 @@ export function GameProvider({ children }: { children: ReactNode }) {
           bitwyKitchenShots: id === "bitwy" ? 0 : s.bitwyKitchenShots,
           bitwyChoseKitchen: id === "bitwy" ? false : s.bitwyChoseKitchen,
           bitwyKitchenBailed: id === "bitwy" ? false : s.bitwyKitchenBailed,
+          bitwyHeardSkibaConfession:
+            id === "bitwy" ? false : s.bitwyHeardSkibaConfession,
           balanceStartTime: null,
           balanceStopPosition: null,
-          status: { kind: "questActive" as const, message: `Quest: ${loc.name}` },
+          dzialkaPhase: id === "dzialka" ? ("intro" as DzialkaPhase) : null,
+          paryzPhase: id === "paryz" ? ("intro" as ParyzPhase) : null,
+          status:
+            id === "dzialka"
+              ? { kind: "idle" as const, message: "DZIAŁKA" }
+              : id === "paryz"
+                ? { kind: "idle" as const, message: "PARYŻ" }
+              : { kind: "questActive" as const, message: `Quest: ${loc.name}` },
         };
       });
     },
@@ -544,6 +740,54 @@ export function GameProvider({ children }: { children: ReactNode }) {
         const pb = resolvePostBar(s);
         return { ...s, ...pb };
       }
+      if (s.postBitwyPhase === "transition") {
+        const drewniakLoc = LOCATIONS.find((l) => l.id === "drewniak");
+        return {
+          ...s,
+          postBitwyPhase: null,
+          currentLocationId: "drewniak",
+          activeQuestId: "drewniak",
+          status: {
+            kind: "questActive" as const,
+            message: `Quest: ${drewniakLoc?.name ?? "DREWNIAK"}`,
+          },
+        };
+      }
+      if (s.postDrewniakPhase === "hulajnoga-skip-narrator") {
+        return routeToDzialka(s);
+      }
+      if (
+        s.postDrewniakPhase === "hulajnoga-result" &&
+        (s.status.kind === "correct" || s.status.kind === "groomDrinks")
+      ) {
+        return routeToDzialka(s);
+      }
+      if (
+        s.currentLocationId === "drewniak" &&
+        s.completedIds.includes("drewniak") &&
+        !s.postDrewniakPhase &&
+        !s.activeQuestId &&
+        (s.status.kind === "correct" || s.status.kind === "groomDrinks")
+      ) {
+        return {
+          ...s,
+          postDrewniakPhase: "hulajnoga-choice",
+          status: { kind: "idle" as const, message: "CZY BIERZESZ HULAJNOGĘ?" },
+        };
+      }
+      if (
+        s.activeQuestId === "dzialka" &&
+        s.dzialkaPhase === "rap-result" &&
+        (s.status.kind === "correct" ||
+          s.status.kind === "groomDrinks" ||
+          s.status.kind === "teamDrinks")
+      ) {
+        return {
+          ...s,
+          dzialkaPhase: "final-choice",
+          status: { kind: "idle" as const, message: "PARYŻ czy DOM?" },
+        };
+      }
       return { ...s, status: { kind: "idle", message: "Wybierz lokację" } };
     });
   }, []);
@@ -653,6 +897,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       return {
         ...s,
         foodPhase: "pekin-aftermath" as const,
+        sawPekinEvent: true,
         teamShots: s.teamShots + 1,
         status: {
           kind: "teamDrinks" as const,
@@ -871,6 +1116,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       return {
         ...s,
         bitwyPhase: "kitchen-confession" as BitwyPhase,
+        bitwyHeardSkibaConfession: true,
         status: { kind: "idle" as const, message: "Skiba ma coś do powiedzenia..." },
       };
     });
@@ -906,10 +1152,16 @@ export function GameProvider({ children }: { children: ReactNode }) {
             ...s,
             bitwyPhase: null,
             activeQuestId: null,
-            completedIds: [...s.completedIds, "bitwy"],
+            completedIds: s.completedIds.includes("bitwy")
+              ? s.completedIds
+              : [...s.completedIds, "bitwy"],
             balanceStartTime: null,
             balanceStopPosition: null,
-            status: { kind: "idle" as const, message: "Wybierz lokację" },
+            postBitwyPhase: "transition",
+            status: {
+              kind: "idle" as const,
+              message: POST_BITWY_TRANSITION_TEXT,
+            },
           };
         default:
           return s;
@@ -927,12 +1179,220 @@ export function GameProvider({ children }: { children: ReactNode }) {
       return {
         ...s,
         balanceStopPosition: pos,
+        bitwyBalanceSuccess: success ? true : s.bitwyBalanceSuccess,
         manPoints: s.manPoints + (success ? BALANCE_POINTS : 0),
         shotCount: success ? s.shotCount : s.shotCount + 1,
         status: success
           ? { kind: "correct" as const, message: "Pion złapany. Chwilowo. Fizyka jest zaskoczona." }
           : { kind: "groomDrinks" as const, message: "Pion uciekł. Godność też. Lama pije." },
       };
+    });
+  }, []);
+
+  const skipHulajnoga = useCallback(() => {
+    setState((s) => {
+      if (s.postDrewniakPhase !== "hulajnoga-choice") return s;
+      return {
+        ...s,
+        postDrewniakPhase: "hulajnoga-skip-narrator",
+        status: {
+          kind: "idle" as const,
+          message:
+            "Niepokojąco rozsądna decyzja. Lama dociera na działkę bez punktów za styl, ale też bez nowej historii medycznej.",
+        },
+      };
+    });
+  }, []);
+
+  const startHulajnoga = useCallback(() => {
+    setState((s) => {
+      if (s.postDrewniakPhase !== "hulajnoga-choice") return s;
+      return {
+        ...s,
+        postDrewniakPhase: "hulajnoga-running",
+        hulajnogaStartedAt: Date.now(),
+        hulajnogaClicks: 0,
+        hulajnogaResult: null,
+        status: { kind: "questActive" as const, message: "HULAJNOGA HIGH RISK" },
+      };
+    });
+  }, []);
+
+  const hulajnogaClick = useCallback(() => {
+    setState((s) => {
+      if (s.postDrewniakPhase !== "hulajnoga-running" || s.hulajnogaResult) return s;
+      const next = s.hulajnogaClicks + 1;
+      if (next >= HULAJNOGA_REQUIRED_CLICKS) {
+        return applyHulajnogaResult({ ...s, hulajnogaClicks: next }, true);
+      }
+      return { ...s, hulajnogaClicks: next };
+    });
+  }, []);
+
+  useEffect(() => {
+    if (
+      state.postDrewniakPhase !== "hulajnoga-running" ||
+      !state.hulajnogaStartedAt ||
+      state.hulajnogaResult
+    ) {
+      return;
+    }
+    const elapsed = Date.now() - state.hulajnogaStartedAt;
+    if (elapsed >= HULAJNOGA_DURATION_MS) {
+      setState((s) => {
+        if (s.postDrewniakPhase !== "hulajnoga-running" || s.hulajnogaResult) return s;
+        return applyHulajnogaResult(s, false);
+      });
+      return;
+    }
+    const remaining = HULAJNOGA_DURATION_MS - elapsed;
+    const t = setTimeout(() => {
+      setState((s) => {
+        if (s.postDrewniakPhase !== "hulajnoga-running" || s.hulajnogaResult) return s;
+        if (Date.now() - (s.hulajnogaStartedAt ?? 0) >= HULAJNOGA_DURATION_MS) {
+          return applyHulajnogaResult(s, false);
+        }
+        return s;
+      });
+    }, remaining);
+    return () => clearTimeout(t);
+  }, [
+    state.postDrewniakPhase,
+    state.hulajnogaStartedAt,
+    state.hulajnogaResult,
+    state.hulajnogaClicks,
+  ]);
+
+  const advanceDzialka = useCallback(() => {
+    setState((s) => {
+      if (s.activeQuestId !== "dzialka" || !s.dzialkaPhase) return s;
+      switch (s.dzialkaPhase) {
+        case "intro":
+          return { ...s, dzialkaPhase: "random", status: { kind: "idle" as const, message: "DZIAŁKA" } };
+        case "random":
+          return {
+            ...s,
+            dzialkaPhase: "rap",
+            status: { kind: "questActive" as const, message: "DZIAŁKA RAP TEST" },
+          };
+        default:
+          return s;
+      }
+    });
+  }, []);
+
+  const answerDzialkaRap = useCallback((index: number) => {
+    setState((s) => {
+      if (s.dzialkaPhase !== "rap" || s.activeQuestId !== "dzialka") return s;
+      const success = index === DZIALKA_RAP.correctAnswerIndex;
+      const message = success
+        ? `${DZIALKA_RAP.successNarrator}\n\n${DZIALKA_RAP.successFeedback}`
+        : `${DZIALKA_RAP.failureNarrator}\n\n${DZIALKA_RAP.failureFeedback}`;
+      return {
+        ...s,
+        dzialkaPhase: "rap-result",
+        dzialkaRapOutcome: success ? "success" : "fail",
+        teamShots: success ? s.teamShots + 1 : s.teamShots,
+        shotCount: success ? s.shotCount : s.shotCount + 1,
+        status: success
+          ? { kind: "teamDrinks" as const, message }
+          : { kind: "groomDrinks" as const, message },
+      };
+    });
+  }, []);
+
+  const chooseDzialkaRoute = useCallback((route: "paryz" | "dom-zgon") => {
+    setState((s) => {
+      if (s.dzialkaPhase !== "final-choice" || s.activeQuestId !== "dzialka") return s;
+      if (route === "paryz") {
+        return startParyzQuest({
+          ...s,
+          completedIds: s.completedIds.includes("dzialka")
+            ? s.completedIds
+            : [...s.completedIds, "dzialka"],
+        });
+      }
+      return routeToDomSummary(
+        {
+          ...s,
+          completedIds: s.completedIds.includes("dzialka")
+            ? s.completedIds
+            : [...s.completedIds, "dzialka"],
+        },
+        DOM_DIRECT_TRANSITION,
+        { completeParyz: false, clearParyz: true },
+      );
+    });
+  }, []);
+
+  const advanceParyz = useCallback(() => {
+    setState((s) => {
+      if (s.activeQuestId !== "paryz" || !s.paryzPhase) return s;
+      switch (s.paryzPhase) {
+        case "intro":
+          return { ...s, paryzPhase: "choice-1", status: { kind: "idle" as const, message: "PARYŻ — DECYZJA 1" } };
+        case "vomit":
+          return { ...s, paryzPhase: "choice-2", status: { kind: "idle" as const, message: "PARYŻ — DECYZJA 2" } };
+        case "sleep":
+          return { ...s, paryzPhase: "choice-3", status: { kind: "idle" as const, message: "PARYŻ — DECYZJA 3" } };
+        default:
+          return s;
+      }
+    });
+  }, []);
+
+  const chooseParyzOption = useCallback(
+    (option: "real-shot" | "group-shot" | "call-marta" | "go-home") => {
+      setState((s) => {
+        if (s.activeQuestId !== "paryz" || !s.paryzPhase) return s;
+        if (option === "call-marta") {
+          return {
+            ...s,
+            paryzCalledMarta: true,
+            paryzPhase: "marta-call",
+            status: { kind: "idle" as const, message: "MARTA ODBIERA" },
+          };
+        }
+        if (option === "real-shot" && s.paryzPhase === "choice-1") {
+          return {
+            ...s,
+            shotCount: s.shotCount + 1,
+            paryzTookFirstShot: true,
+            paryzPhase: "vomit",
+            status: { kind: "idle" as const, message: PARYZ_VOMIT_TEXT },
+          };
+        }
+        if (option === "group-shot" && s.paryzPhase === "choice-2") {
+          return {
+            ...s,
+            shotCount: s.shotCount + 1,
+            teamShots: s.teamShots + 1,
+            paryzTookGroupShot: true,
+            paryzSleptInWoods: true,
+            paryzPhase: "sleep",
+            status: { kind: "idle" as const, message: `${PARYZ_SLEEP_TEXT}\n\nLama budzi się w szoku.` },
+          };
+        }
+        if (option === "go-home" && s.paryzPhase === "choice-3") {
+          return routeToDomSummary(s, PARYZ_ESCAPE_TRANSITION, {
+            completeParyz: true,
+            clearParyz: true,
+          });
+        }
+        return s;
+      });
+    },
+    [],
+  );
+
+  const confirmParyzReturnHome = useCallback(() => {
+    setState((s) => {
+      if (s.activeQuestId !== "paryz" || s.paryzPhase !== "marta-call") return s;
+      return routeToDomSummary(
+        { ...s, paryzCalledMarta: true },
+        "System wykrył głos rozsądku. Lama otrzymuje misję główną: powrót do domu.",
+        { completeParyz: true, clearParyz: true },
+      );
     });
   }, []);
 
@@ -986,6 +1446,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
         balanceStartTime: null,
         balanceStopPosition: null,
         bitwyKitchenBailed: false,
+        postBitwyPhase: null,
+        ...emptyHulajnogaState(),
+        dzialkaPhase: null,
+        paryzPhase: null,
         ...emptyPourState(),
         status: { kind: "correct", message: loc.rewardText },
       };
@@ -1011,6 +1475,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         riskPhase: null,
         bartenderPhase: null,
         bartenderChoiceIndex: null,
+        paryzPhase: null,
         ...emptyPourState(),
         status: {
           kind: "groomDrinks",
@@ -1066,6 +1531,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
     listenToSkiba,
     advanceBitwy,
     stopBalance,
+    skipHulajnoga,
+    startHulajnoga,
+    hulajnogaClick,
+    advanceDzialka,
+    answerDzialkaRap,
+    chooseDzialkaRoute,
+    advanceParyz,
+    chooseParyzOption,
+    confirmParyzReturnHome,
   };
 
   return <GameCtx.Provider value={value}>{children}</GameCtx.Provider>;

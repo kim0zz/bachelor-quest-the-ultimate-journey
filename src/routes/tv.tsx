@@ -8,6 +8,9 @@ import { StatusBurst } from "@/components/StatusBurst";
 import { FinalVerdict } from "@/components/FinalVerdict";
 import { SecretUnderBarTv } from "@/components/SecretUnderBar";
 import { BitwyTv } from "@/components/Bitwy";
+import { PostBitwyTransitionTv, HulajnogaTv } from "@/components/Hulajnoga";
+import { DzialkaTv } from "@/components/Dzialka";
+import { ParyzTv } from "@/components/Paryz";
 import { RealtimeIndicator } from "@/components/RealtimeIndicator";
 
 export const Route = createFileRoute("/tv")({
@@ -151,6 +154,10 @@ function TvInner() {
       <StatusBurst />
       <SecretUnderBarTv />
       <BitwyTv />
+      <PostBitwyTransitionTv />
+      <HulajnogaTv />
+      <DzialkaTv />
+      <ParyzTv />
       <PostBarOverlay />
       <PekinBarOverlay />
       <PekinTransitionOverlay />

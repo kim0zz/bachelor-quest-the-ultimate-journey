@@ -5,7 +5,10 @@ import { GroomAvatar } from "./GroomAvatar";
 import { SecretUnderBarController } from "./SecretUnderBar";
 import { ShotPourMinigameController } from "./ShotPourMinigame";
 import { BitwyController } from "./Bitwy";
-import { isShotPourLocation } from "@/data/gameData";
+import { HulajnogaController } from "./Hulajnoga";
+import { DzialkaController } from "./Dzialka";
+import { ParyzController } from "./Paryz";
+import { isShotPourLocation, VERDICTS } from "@/data/gameData";
 
 export function ControllerView() {
   const {
@@ -91,6 +94,38 @@ export function ControllerView() {
       state.status.kind === "wrong" ||
       state.status.kind === "groomDrinks" ||
       state.status.kind === "teamDrinks");
+
+  const verdict =
+    [...VERDICTS].reverse().find((v) => state.manPoints >= v.minPoints) ??
+    VERDICTS[0];
+
+  if (state.finalShown) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-950 via-purple-950 to-slate-950 p-5 text-white">
+        <div className="rounded-3xl border-2 border-amber-400 bg-black/50 p-6 text-center">
+          <div className="text-sm uppercase tracking-widest text-amber-300">
+            DOM / KONOPA
+          </div>
+          <h2 className="mt-2 text-3xl font-black">{verdict.title}</h2>
+          <p className="mt-3 text-sm text-white/70">{verdict.subtitle}</p>
+          <div className="mt-5 grid grid-cols-3 gap-2 text-center">
+            <div className="rounded-xl border border-fuchsia-400 bg-black/40 p-3">
+              <div className="text-[10px] uppercase text-white/60">Mąż</div>
+              <div className="text-2xl font-black">💍 {state.manPoints}</div>
+            </div>
+            <div className="rounded-xl border border-amber-400 bg-black/40 p-3">
+              <div className="text-[10px] uppercase text-white/60">Shoty</div>
+              <div className="text-2xl font-black">🥃 {state.shotCount}</div>
+            </div>
+            <div className="rounded-xl border border-cyan-400 bg-black/40 p-3">
+              <div className="text-[10px] uppercase text-white/60">Team</div>
+              <div className="text-2xl font-black">🍻 {state.teamShots}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-purple-950 to-slate-950 p-5 text-white">
@@ -198,6 +233,8 @@ export function ControllerView() {
               🍺 Za Pekin Bar! →
             </motion.button>
           </div>
+        ) : state.postBitwyPhase || state.postDrewniakPhase ? (
+          <HulajnogaController />
         ) : state.foodPhase === "pekin-transition" ? (
           /* ── Pekin → GOFER transition note ── */
           <div className="space-y-3">
@@ -256,6 +293,10 @@ export function ControllerView() {
               Dalej →
             </motion.button>
           </div>
+        ) : activeQuest?.id === "dzialka" && state.dzialkaPhase ? (
+          <DzialkaController />
+        ) : activeQuest?.id === "paryz" && state.paryzPhase ? (
+          <ParyzController />
         ) : activeQuest?.id === "bitwy" && state.bitwyPhase ? (
           <BitwyController />
         ) : !activeQuest ? (

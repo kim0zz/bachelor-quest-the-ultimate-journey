@@ -8,6 +8,8 @@ export function QuestModal() {
   useTick(100);
 
   if (activeQuest?.id === "bitwy") return null;
+  if (activeQuest?.id === "dzialka") return null;
+  if (activeQuest?.id === "paryz") return null;
   if (activeQuest && state.completedIds.includes(activeQuest.id)) return null;
 
   const isRisk = activeQuest?.type === "risk";

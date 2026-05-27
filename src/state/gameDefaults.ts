@@ -45,6 +45,28 @@ export function createInitialGameState() {
     // Balance minigame
     balanceStartTime: null as number | null,
     balanceStopPosition: null as number | null,
+    postBitwyPhase: null as "transition" | null,
+    postDrewniakPhase: null as
+      | "hulajnoga-choice"
+      | "hulajnoga-skip-narrator"
+      | "hulajnoga-running"
+      | "hulajnoga-result"
+      | null,
+    hulajnogaStartedAt: null as number | null,
+    hulajnogaClicks: 0,
+    hulajnogaResult: null as "success" | "fail" | null,
+    dzialkaPhase: null as string | null,
+    paryzPhase: null as string | null,
+    paryzCalledMarta: false,
+    paryzTookFirstShot: false,
+    paryzTookGroupShot: false,
+    paryzSleptInWoods: false,
+    sawPekinEvent: false,
+    bitwyBalanceSuccess: false,
+    bitwyHeardSkibaConfession: false,
+    hulajnogaSucceeded: false,
+    hulajnogaFailed: false,
+    dzialkaRapOutcome: null as "success" | "fail" | null,
     ...emptyPourState(),
   };
 }

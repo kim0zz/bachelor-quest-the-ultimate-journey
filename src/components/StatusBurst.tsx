@@ -6,6 +6,8 @@ import { useGame } from "@/state/gameStore";
 export function StatusBurst() {
   const { state, closeStatus } = useGame();
   const kind = state.status.kind;
+  if (state.postDrewniakPhase === "hulajnoga-result") return null;
+  if (state.activeQuestId === "dzialka" && state.dzialkaPhase === "rap-result") return null;
   const show =
     kind === "correct" ||
     kind === "wrong" ||
