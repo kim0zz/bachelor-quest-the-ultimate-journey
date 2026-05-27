@@ -124,7 +124,7 @@ export const LOCATIONS: Location[] = [
     name: "KONOPA",
     shortName: "Start",
     description:
-      "Lama budzi się na Konopie. Człowiek odpowiedzialny napiłby się wody i przemyślał życie. Lama ma na dziś inne plany.",
+      "Lama budzi się na KONOPA. Człowiek odpowiedzialny napiłby się wody i przemyślał życie. Lama ma na dziś inne plany.",
     x: 6,
     y: 60,
     type: "start",
@@ -190,12 +190,12 @@ export const LOCATIONS: Location[] = [
     icon: "🍺",
     pointsForSuccess: 10,
     rewardText:
-      "Okej, szacun. Lama nie pamięta połowy powrotów do domu, ale ścianę przy kiblu ma zapisaną w sercu. To jest lokalny patriotyzm.",
+      "Kony kiwa z uznaniem. Ślepy i Kulawy rozpoznani. Lokalna mitologia Małego Piwka została zachowana.",
     penaltyText:
-      "Nie no, Lama. Tyle wizyt, tyle spojrzeń w ścianę kontemplacji, a ty nie wiesz? Za takie braki edukacyjne się pije.",
-    question: "Ile jest kapselków na ścianie przy kiblu w MP?",
-    answers: ["1337", "420", "od chuja", "997"],
-    correctAnswerIndex: 2,
+      "Kony patrzy z rozczarowaniem. Nie znać Ślepego i Kulawego w Małym Piwku to jak nie znać własnego PIN-u po trzecim piwie. Lama pije.",
+    question: "Jaka legendarna para rezydentów Małego Piwka tworzyła lokalny duet specjalny?",
+    answers: ["Ślepy i Kulawy", "Głuchy i Garbaty", "Krzywy i Bezzębny", "Łysy i Chromy"],
+    correctAnswerIndex: 0,
     bartenderDialogue: {
       bartenderName: "Kony",
       introLine:
@@ -204,18 +204,18 @@ export const LOCATIONS: Location[] = [
         {
           label: "Kony, ja znam to miejsce jak własną kieszeń.",
           outcomeLine:
-            "To dobrze, bo kieszenie zwykle masz puste po wizycie tutaj. Sprawdzimy znajomość terenu.",
+            "To dobrze, bo Małe Piwko ma własną mitologię. Sprawdzimy, czy znasz lokalne legendy.",
         },
         {
           label: "Najpierw piwko, potem pytania.",
           outcomeLine:
-            "Klasyka Lamy: najpierw utrudnić sobie zadanie, potem udawać, że tak miało być.",
+            "Klasyka Lamy: najpierw utrudnić sobie zadanie, potem udawać, że to element strategii. Dobra, zaczynamy od lokalnych legend.",
           bonusPoints: 5,
         },
         {
           label: "Tylko na chwilę.",
           outcomeLine:
-            "To zdanie powinno być wyryte nad wejściem. Nikt nigdy nie wyszedł po chwili, zwłaszcza ty.",
+            "To zdanie powinno być wyryte nad wejściem. Ale zanim znikniesz w czasie i przestrzeni, szybki test z miejscowych legend.",
         },
       ],
     },
@@ -281,7 +281,7 @@ export const LOCATIONS: Location[] = [
     name: "BITWY",
     shortName: "BITWY",
     description:
-      "Melina, kuchnia, salon i decyzje, których nikt nie podpisuje nazwiskiem.",
+      "Legendarna meliniarnia i centrum dowodzenia melanżem. Na BITWY nikt nie pytał, czy pijesz — pytali tylko, z kim i z czego.",
     x: 48,
     y: 48,
     type: "challenge",
@@ -441,8 +441,8 @@ export const MAP_CONNECTIONS: [string, string][] = [
 export const MALE_PIWKO_ID = "male-piwko";
 
 export const BALANCE_PERIOD_MS = 2500;
-export const BALANCE_TARGET_MIN = 35;
-export const BALANCE_TARGET_MAX = 65;
+export const BALANCE_TARGET_MIN = 42;
+export const BALANCE_TARGET_MAX = 58;
 export const BALANCE_POINTS = 10;
 
 export function getBalancePosition(startTime: number): number {

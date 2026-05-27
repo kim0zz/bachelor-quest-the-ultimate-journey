@@ -21,7 +21,7 @@ export function createInitialGameState() {
     status: {
       kind: "idle" as const,
       message:
-        "Lama budzi się na Konopie. Człowiek odpowiedzialny napiłby się wody i przemyślał życie. Lama ma na dziś inne plany.",
+        "Lama budzi się na KONOPA. Człowiek odpowiedzialny napiłby się wody i przemyślał życie. Lama ma na dziś inne plany.",
     },
     finalShown: false,
     riskPhase: null,
@@ -41,6 +41,7 @@ export function createInitialGameState() {
     bitwyPhase: null as string | null,
     bitwyKitchenShots: 0,
     bitwyChoseKitchen: false,
+    bitwyKitchenBailed: false,
     // Balance minigame
     balanceStartTime: null as number | null,
     balanceStopPosition: null as number | null,

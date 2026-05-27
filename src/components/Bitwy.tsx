@@ -77,10 +77,10 @@ function BitwyIntroTv() {
       </p>
       <div className="mx-auto mt-8 max-w-3xl rounded-2xl border border-amber-400/40 bg-amber-950/30 p-6">
         <p className="text-lg text-amber-200 italic">
-          📞 Skiba dzwoni:
+          🚪 Skiba łapie Lamę w korytarzu:
         </p>
         <p className="mt-2 text-2xl font-bold text-white/90">
-          &quot;{GROOM.nickname}, kurwa, chodź do kuchni na dwa szybkie i bajerę. Salon nie ucieknie, a ja mam temat życia.&quot;
+          &quot;Lama, kurwa, chodź do kuchni na dwa szybkie i bajerę. Salon nie ucieknie, a ja mam temat życia.&quot;
         </p>
       </div>
       <p className="mt-8 text-lg text-white/50">Wybierz na kontrolerze 📱</p>
@@ -95,7 +95,7 @@ function BitwyKitchenTv() {
       <div className="text-6xl mb-4">🍳</div>
       <h2 className="text-4xl font-black uppercase tracking-wide text-amber-300">KUCHNIA NA BITWY</h2>
       <p className="mx-auto mt-4 max-w-2xl text-xl text-white/70">
-        Skiba woła {GROOM.accusative} na dwa szybkie. Żeby usłyszeć życiówkę, trzeba najpierw potwierdzić dwa shoty.
+        Skiba łapie {GROOM.accusative} w korytarzu na dwa szybkie. Żeby usłyszeć życiówkę, trzeba najpierw potwierdzić dwa shoty.
       </p>
       <div className="mt-8 flex justify-center gap-8">
         {[1, 2].map((n) => (
@@ -116,7 +116,9 @@ function BitwyKitchenTv() {
           ? `Shot ${state.bitwyKitchenShots}/2`
           : "Shoty wypite! Słuchaj Skiby."}
       </p>
-      <p className="mt-4 text-lg text-white/50">Potwierdź na kontrolerze 📱</p>
+      <p className="mt-4 text-lg text-white/50">
+        Potwierdź na kontrolerze 📱 — albo wybierz „NIE DAŁEM RADY”
+      </p>
     </TvCard>
   );
 }
@@ -157,9 +159,11 @@ function BitwySalonNarratorTv() {
     <TvCard>
       <div className="text-6xl mb-4">🛋️</div>
       <p className="mx-auto max-w-3xl text-3xl font-bold leading-relaxed text-white/90">
-        {state.bitwyChoseKitchen
-          ? `${GROOM.nickname} poznał życiówkę Skiby. Niestety za cenę dwóch shotów i części szacunku do świata.`
-          : `${GROOM.nickname} próbuje zachować klasę i ominąć kuchnię. Skiba zapamięta ten brak lojalności.`}
+        {state.bitwyKitchenBailed
+          ? "Lama nie dał rady. Skiba kiwa głową z rozczarowaniem, jakby widział to już wcześniej."
+          : state.bitwyChoseKitchen
+            ? `${GROOM.nickname} poznał życiówkę Skiby. Niestety za cenę dwóch shotów i części szacunku do świata.`
+            : `${GROOM.nickname} próbuje zachować klasę i ominąć kuchnię. Skiba zapamięta ten brak lojalności.`}
       </p>
       <p className="mx-auto mt-6 max-w-3xl text-2xl text-white/70">
         W salonie {GROOM.nickname} siada i nalewa sobie shota. Na BITWY nie pytają, czy pijesz. Pytają, czy potrafisz nalać.
@@ -284,6 +288,7 @@ export function BitwyController() {
     state,
     chooseBitwyPath,
     confirmBitwyKitchenShot,
+    bailBitwyKitchen,
     listenToSkiba,
     advanceBitwy,
     stopBalance,
@@ -304,13 +309,20 @@ export function BitwyController() {
         <BitwyKitchenCtrl
           shots={state.bitwyKitchenShots}
           confirmShot={confirmBitwyKitchenShot}
+          bail={bailBitwyKitchen}
           listen={listenToSkiba}
         />
       );
     case "kitchen-confession":
       return <BitwyConfessionCtrl advance={advanceBitwy} />;
     case "salon-narrator":
-      return <BitwySalonNarratorCtrl choseKitchen={state.bitwyChoseKitchen} advance={advanceBitwy} />;
+      return (
+        <BitwySalonNarratorCtrl
+          choseKitchen={state.bitwyChoseKitchen}
+          kitchenBailed={state.bitwyKitchenBailed}
+          advance={advanceBitwy}
+        />
+      );
     case "salon-shot-pour":
       return <ShotPourMinigameController loc={loc} />;
     case "balance-intro":
@@ -375,7 +387,7 @@ function BitwyIntroCtrl({ chooseBitwyPath }: { chooseBitwyPath: (k: boolean) => 
       <div className="text-center">
         <div className="text-6xl mb-2">🏚️</div>
         <h3 className="text-2xl font-black uppercase">BITWY</h3>
-        <p className="mt-2 text-sm text-white/60">Skiba dzwoni z kuchni.</p>
+        <p className="mt-2 text-sm text-white/60">Skiba łapie Lamę w korytarzu.</p>
       </div>
       <motion.button
         whileTap={{ scale: 0.97 }}
@@ -406,10 +418,12 @@ function BitwyIntroCtrl({ chooseBitwyPath }: { chooseBitwyPath: (k: boolean) => 
 function BitwyKitchenCtrl({
   shots,
   confirmShot,
+  bail,
   listen,
 }: {
   shots: number;
   confirmShot: () => void;
+  bail: () => void;
   listen: () => void;
 }) {
   const prevShots = useRef(shots);
@@ -455,13 +469,22 @@ function BitwyKitchenCtrl({
         </motion.div>
       )}
       {shots < 2 ? (
-        <motion.button
-          whileTap={{ scale: 0.97 }}
-          onClick={confirmShot}
-          className="w-full rounded-2xl border-4 border-amber-300 bg-gradient-to-b from-amber-500 to-amber-700 p-8 text-3xl font-black uppercase text-black shadow-[0_0_40px_rgba(251,191,36,0.5)]"
-        >
-          🥃 Shot {shots + 1} wypity
-        </motion.button>
+        <>
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={confirmShot}
+            className="w-full rounded-2xl border-4 border-amber-300 bg-gradient-to-b from-amber-500 to-amber-700 p-8 text-3xl font-black uppercase text-black shadow-[0_0_40px_rgba(251,191,36,0.5)]"
+          >
+            🥃 Shot {shots + 1} wypity
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={bail}
+            className="w-full rounded-2xl border-2 border-rose-400/60 bg-rose-950/30 p-5 text-xl font-black uppercase text-rose-300"
+          >
+            ❌ NIE DAŁEM RADY
+          </motion.button>
+        </>
       ) : (
         <motion.button
           whileTap={{ scale: 0.97 }}
@@ -516,14 +539,24 @@ function BitwyConfessionCtrl({ advance }: { advance: () => void }) {
   );
 }
 
-function BitwySalonNarratorCtrl({ choseKitchen, advance }: { choseKitchen: boolean; advance: () => void }) {
+function BitwySalonNarratorCtrl({
+  choseKitchen,
+  kitchenBailed,
+  advance,
+}: {
+  choseKitchen: boolean;
+  kitchenBailed: boolean;
+  advance: () => void;
+}) {
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-white/20 bg-white/5 p-4 text-center">
         <p className="text-base text-white/80">
-          {choseKitchen
-            ? `${GROOM.nickname} poznał życiówkę Skiby. Niestety za cenę dwóch shotów i części szacunku do świata.`
-            : "Dobra, idź, idź, i tak wszyscy już wiedzą!"}
+          {kitchenBailed
+            ? "Lama nie dał rady. Skiba kiwa głową z rozczarowaniem, jakby widział to już wcześniej."
+            : choseKitchen
+              ? `${GROOM.nickname} poznał życiówkę Skiby. Niestety za cenę dwóch shotów i części szacunku do świata.`
+              : "Dobra, idź, idź, i tak wszyscy już wiedzą!"}
         </p>
       </div>
       <div className="rounded-2xl border border-white/20 bg-white/5 p-4 text-center">

@@ -117,6 +117,7 @@ export interface GameState {
   bitwyPhase: BitwyPhase;
   bitwyKitchenShots: number;
   bitwyChoseKitchen: boolean;
+  bitwyKitchenBailed: boolean;
   balanceStartTime: number | null;
   balanceStopPosition: number | null;
 }
@@ -218,6 +219,7 @@ interface Ctx {
   acknowledgePekinBar: () => void;
   chooseBitwyPath: (kitchen: boolean) => void;
   confirmBitwyKitchenShot: () => void;
+  bailBitwyKitchen: () => void;
   listenToSkiba: () => void;
   advanceBitwy: () => void;
   stopBalance: () => void;
@@ -347,6 +349,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
           bitwyPhase: id === "bitwy" ? ("intro" as BitwyPhase) : null,
           bitwyKitchenShots: id === "bitwy" ? 0 : s.bitwyKitchenShots,
           bitwyChoseKitchen: id === "bitwy" ? false : s.bitwyChoseKitchen,
+          bitwyKitchenBailed: id === "bitwy" ? false : s.bitwyKitchenBailed,
           balanceStartTime: null,
           balanceStopPosition: null,
           status: { kind: "questActive" as const, message: `Quest: ${loc.name}` },
@@ -822,6 +825,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         bitwyPhase: kitchen ? ("kitchen-shots" as BitwyPhase) : ("salon-narrator" as BitwyPhase),
         bitwyChoseKitchen: kitchen,
         bitwyKitchenShots: 0,
+        bitwyKitchenBailed: false,
         status: {
           kind: "idle" as const,
           message: kitchen
@@ -841,6 +845,22 @@ export function GameProvider({ children }: { children: ReactNode }) {
         shotCount: s.shotCount + 1,
         bitwyKitchenShots: next,
         status: { kind: "idle" as const, message: `Shot ${next}/2 potwierdzony! 🥃` },
+      };
+    });
+  }, []);
+
+  const bailBitwyKitchen = useCallback(() => {
+    setState((s) => {
+      if (s.bitwyPhase !== "kitchen-shots" || s.bitwyKitchenShots >= 2) return s;
+      return {
+        ...s,
+        bitwyPhase: "salon-narrator" as BitwyPhase,
+        bitwyKitchenBailed: true,
+        status: {
+          kind: "idle" as const,
+          message:
+            "Lama nie dał rady. Skiba kiwa głową z rozczarowaniem, jakby widział to już wcześniej.",
+        },
       };
     });
   }, []);
@@ -965,6 +985,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         bitwyPhase: null,
         balanceStartTime: null,
         balanceStopPosition: null,
+        bitwyKitchenBailed: false,
         ...emptyPourState(),
         status: { kind: "correct", message: loc.rewardText },
       };
@@ -1041,6 +1062,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     acknowledgePekinBar,
     chooseBitwyPath,
     confirmBitwyKitchenShot,
+    bailBitwyKitchen,
     listenToSkiba,
     advanceBitwy,
     stopBalance,
