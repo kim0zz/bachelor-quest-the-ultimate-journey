@@ -8,6 +8,7 @@ export function StatusBurst() {
   const kind = state.status.kind;
   if (state.postDrewniakPhase === "hulajnoga-result") return null;
   if (state.activeQuestId === "dzialka" && state.dzialkaPhase === "rap-result") return null;
+  if (state.secretUnderBarPhase) return null;
   const show =
     kind === "correct" ||
     kind === "wrong" ||

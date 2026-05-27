@@ -211,7 +211,7 @@ export const LOCATIONS: Location[] = [
             "To dobrze, bo Małe Piwko ma własną mitologię. Sprawdzimy, czy znasz lokalne legendy.",
         },
         {
-          label: "Najpierw piwko, potem pytania.",
+          label: "Najpierw duży Specjal, potem pytania.",
           outcomeLine:
             "Klasyka Lamy: najpierw utrudnić sobie zadanie, potem udawać, że to element strategii. Dobra, zaczynamy od lokalnych legend.",
           bonusPoints: 5,
@@ -222,6 +222,16 @@ export const LOCATIONS: Location[] = [
             "To zdanie powinno być wyryte nad wejściem. Ale zanim znikniesz w czasie i przestrzeni, szybki test z miejscowych legend.",
         },
       ],
+    },
+    postQuestSecretUnderBar: {
+      enabled: true,
+      requiredShots: 2,
+      imageUrl: "/assets/groom-drunk-trap.jpg",
+      title: "SEKRET POD BAREM",
+      offerTitle: "Ktoś mówi, że pod barem w Małym Piwku jest coś, czego regulamin nie przewidział.",
+      enterText: "Lama schyla się pod ladę. Dwa prawdziwe shoty — potem zobaczymy, czy to był dobry pomysł.",
+      revealTitle: "PUŁAPKA!",
+      revealText: "NAKURWIŁEŚ SIĘ NA DARMO",
     },
   },
   {
@@ -292,7 +302,7 @@ export const LOCATIONS: Location[] = [
     locked: true,
     icon: "🏚️",
     pointsForSuccess: 10,
-    rewardText: "Salon uznał nalanie. Lama jeszcze funkcjonuje. +10 Mąż Points.",
+    rewardText: "Pokój Bewicza uznał nalanie. Lama jeszcze funkcjonuje. +10 Mąż Points.",
     penaltyText: "BITWY nie wybacza braku kontroli. Lama pije.",
     targetMin: 80,
     targetMax: 95,
@@ -490,7 +500,16 @@ export const PARYZ_INTRO_2 =
   "Jest ciemno, zimno, a jego organizm zaczyna wysyłać maile z wypowiedzeniem. Lama narzeka, że ma pizdę, ale oczywiście zamiast wracać, rozważa dalsze decyzje.";
 
 export const PARYZ_VOMIT_TEXT =
-  "Lama wali shota w lesie, bo najwyraźniej fabuła nie miała jeszcze dość. Po chwili organizm składa reklamację ustną i Lama się rzyga.";
+  "Lama wali shota w lesie, bo najwyraźniej fabuła nie miała jeszcze dość. Po chwili organizm składa reklamację ustną i Lama się zrzygał.";
+
+export const PRE_BITWY_ZUKER_INTRO =
+  "Telefon Lamy zaczyna wibrować. Żuker dzwoni z BITWY.";
+
+export const PRE_BITWY_ZUKER_LINE =
+  "Lama, gdzie ty jesteś? Kiedy będziesz? Tu już się robi konkretnie.";
+
+export const PRE_BITWY_NARRATOR =
+  "Lama patrzy na telefon, patrzy na stan organizmu i podejmuje decyzję, którą historycy melanżu ocenią jako nieuniknioną. Czas na BITWY.";
 
 export const PARYZ_SLEEP_TEXT =
   "Lama robi kolejny krok w stronę legendy i trzy kroki w stronę gleby. Po wszystkim zasypia na pół godziny jak nieautoryzowana aktualizacja systemu.";

@@ -26,6 +26,9 @@ import {
   PARYZ_SLEEP_TEXT,
   PARYZ_ESCAPE_TRANSITION,
   DOM_DIRECT_TRANSITION,
+  PRE_BITWY_ZUKER_INTRO,
+  PRE_BITWY_ZUKER_LINE,
+  PRE_BITWY_NARRATOR,
   evaluatePourLevel,
   getSecretUnderBarConfig,
   isShotPourLocation,
@@ -83,6 +86,8 @@ export type BitwyPhase =
   | null;
 
 export type PostBitwyPhase = "transition" | null;
+
+export type PreBitwyPhase = "zuker-call" | null;
 
 export type PostDrewniakPhase =
   | "hulajnoga-choice"
@@ -159,6 +164,9 @@ export interface GameState {
   balanceStartTime: number | null;
   balanceStopPosition: number | null;
   postBitwyPhase: PostBitwyPhase;
+  preBitwyPhase: PreBitwyPhase;
+  pendingMpSecretOffer: boolean;
+  pendingZukerCall: boolean;
   postDrewniakPhase: PostDrewniakPhase;
   hulajnogaStartedAt: number | null;
   hulajnogaClicks: number;
@@ -454,7 +462,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (state.foodPhase) {
       return [];
     }
-    if (state.postBitwyPhase || state.postDrewniakPhase) {
+    if (state.postBitwyPhase || state.preBitwyPhase || state.postDrewniakPhase) {
       return [];
     }
     if (state.dzialkaPhase) {
@@ -481,6 +489,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     state.earlyGamePhase,
     state.foodPhase,
     state.postBitwyPhase,
+    state.preBitwyPhase,
     state.postDrewniakPhase,
     state.dzialkaPhase,
     state.paryzPhase,
@@ -597,6 +606,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
                 message: opts?.statusMessage ?? loc.penaltyText,
               },
           finalShown: isFinal ? true : s.finalShown,
+          pendingMpSecretOffer: loc.id === MALE_PIWKO_ID,
+          pendingZukerCall: loc.id === "gofer-przy-latarni",
           ...emptyPourState(),
         };
       });
@@ -681,6 +692,48 @@ export function GameProvider({ children }: { children: ReactNode }) {
       if (s.secretUnderBarPhase === "offer") {
         return { ...s, status: { kind: "idle", message: "Decyzja na kontrolerze 📱" } };
       }
+      if (s.pendingMpSecretOffer) {
+        const mpLoc = LOCATIONS.find((l) => l.id === MALE_PIWKO_ID);
+        if (mpLoc && shouldOfferSecretUnderBar(mpLoc, s)) {
+          return {
+            ...s,
+            pendingMpSecretOffer: false,
+            secretUnderBarPhase: "offer",
+            status: {
+              kind: "idle" as const,
+              message: mpLoc.postQuestSecretUnderBar?.offerTitle ?? "SEKRET POD BAREM?",
+            },
+          };
+        }
+        const pb = resolvePostBar({ ...s, pendingMpSecretOffer: false });
+        return { ...s, pendingMpSecretOffer: false, ...pb };
+      }
+      if (s.preBitwyPhase === "zuker-call") {
+        const bitwyLoc = LOCATIONS.find((l) => l.id === "bitwy");
+        return {
+          ...s,
+          preBitwyPhase: null,
+          currentLocationId: "bitwy",
+          activeQuestId: "bitwy",
+          bitwyPhase: "intro",
+          bitwyKitchenShots: 0,
+          bitwyChoseKitchen: false,
+          bitwyKitchenBailed: false,
+          ...emptyPourState(),
+          status: {
+            kind: "questActive" as const,
+            message: `Quest: ${bitwyLoc?.name ?? "BITWY"}`,
+          },
+        };
+      }
+      if (s.pendingZukerCall) {
+        return {
+          ...s,
+          pendingZukerCall: false,
+          preBitwyPhase: "zuker-call",
+          status: { kind: "idle" as const, message: PRE_BITWY_ZUKER_INTRO },
+        };
+      }
       // BITWY: after pour feedback, go to balance intro
       if (s.activeQuestId === "bitwy" && s.bitwyPhase === "salon-shot-pour" &&
           (s.status.kind === "correct" || s.status.kind === "groomDrinks")) {
@@ -701,7 +754,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
           bitwyPhase: "complete" as BitwyPhase,
           status: {
             kind: "idle" as const,
-            message: "Lama wstaje. Nie jest to piękne, ale jest skuteczne. Czas opuścić BITWY, zanim ktoś zaproponuje trzecią kuchnię.",
+            message:
+              "Lama opuszcza BITWY, zanim melina uzna go za element wyposażenia.",
           },
         };
       }
@@ -1130,7 +1184,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
           return {
             ...s,
             bitwyPhase: "salon-narrator" as BitwyPhase,
-            status: { kind: "idle" as const, message: "Czas na salon." },
+            status: { kind: "idle" as const, message: "Czas na Pokój Bewicza." },
           };
         case "salon-narrator":
           return {
@@ -1256,12 +1310,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       });
     }, remaining);
     return () => clearTimeout(t);
-  }, [
-    state.postDrewniakPhase,
-    state.hulajnogaStartedAt,
-    state.hulajnogaResult,
-    state.hulajnogaClicks,
-  ]);
+  }, [state.postDrewniakPhase, state.hulajnogaStartedAt, state.hulajnogaResult]);
 
   const advanceDzialka = useCallback(() => {
     setState((s) => {
@@ -1447,6 +1496,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
         balanceStopPosition: null,
         bitwyKitchenBailed: false,
         postBitwyPhase: null,
+        preBitwyPhase: null,
+        pendingMpSecretOffer: false,
+        pendingZukerCall: false,
+        secretUnderBarPhase: null,
+        secretUnderBarCompleted: false,
+        secretUnderBarShotsConfirmed: 0,
         ...emptyHulajnogaState(),
         dzialkaPhase: null,
         paryzPhase: null,
@@ -1481,7 +1536,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
           kind: "groomDrinks",
           message: loc.penaltyText || "LAMA PIJE",
         },
-        secretUnderBarPhase: offerSecret ? "offer" : s.secretUnderBarPhase,
+        pendingMpSecretOffer:
+          loc.id === MALE_PIWKO_ID && offerSecret,
+        pendingZukerCall: loc.id === "gofer-przy-latarni",
+        secretUnderBarPhase:
+          offerSecret && loc.id !== MALE_PIWKO_ID ? "offer" : s.secretUnderBarPhase,
       };
     });
   }, []);

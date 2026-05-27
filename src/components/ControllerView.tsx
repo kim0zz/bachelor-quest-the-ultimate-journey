@@ -233,7 +233,7 @@ export function ControllerView() {
               🍺 Za Pekin Bar! →
             </motion.button>
           </div>
-        ) : state.postBitwyPhase || state.postDrewniakPhase ? (
+        ) : state.preBitwyPhase || state.postBitwyPhase || state.postDrewniakPhase ? (
           <HulajnogaController />
         ) : state.foodPhase === "pekin-transition" ? (
           /* ── Pekin → GOFER transition note ── */

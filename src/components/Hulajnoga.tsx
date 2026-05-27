@@ -1,9 +1,13 @@
+import { useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   GROOM,
   GROOM_AVATAR_URL,
   HULAJNOGA_DURATION_MS,
   HULAJNOGA_REQUIRED_CLICKS,
+  PRE_BITWY_NARRATOR,
+  PRE_BITWY_ZUKER_INTRO,
+  PRE_BITWY_ZUKER_LINE,
 } from "@/data/gameData";
 import { useGame, useTick } from "@/state/gameStore";
 
@@ -16,6 +20,43 @@ function getHulajnogaProgress(clicks: number): number {
 }
 
 // ── TV ──────────────────────────────────────────────────────────
+
+export function PreBitwyTransitionTv() {
+  const { state } = useGame();
+  if (state.preBitwyPhase !== "zuker-call") return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-30 flex items-center justify-center bg-black/80 backdrop-blur-md p-6"
+      >
+        <motion.div
+          initial={{ scale: 0.85, y: 30 }}
+          animate={{ scale: 1, y: 0 }}
+          className="w-full max-w-5xl rounded-3xl border-2 border-cyan-400 bg-gradient-to-br from-cyan-950 to-slate-950 p-10 text-center shadow-[0_0_80px_rgba(34,211,238,0.4)]"
+        >
+          <div className="text-6xl mb-4">📱</div>
+          <p className="mx-auto max-w-3xl text-2xl leading-relaxed text-white/90">
+            {PRE_BITWY_ZUKER_INTRO}
+          </p>
+          <div className="mx-auto mt-8 max-w-3xl rounded-2xl border border-cyan-400/40 bg-cyan-950/30 p-6 text-left">
+            <p className="text-sm font-bold uppercase text-cyan-300">Żuker:</p>
+            <p className="mt-2 text-2xl font-bold text-white/90">
+              &quot;{PRE_BITWY_ZUKER_LINE}&quot;
+            </p>
+          </div>
+          <p className="mx-auto mt-8 max-w-3xl text-xl italic text-white/70">
+            {PRE_BITWY_NARRATOR}
+          </p>
+          <p className="mt-8 text-lg text-white/50">Kontynuuj na kontrolerze 📱</p>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
 
 export function PostBitwyTransitionTv() {
   const { state } = useGame();
@@ -204,6 +245,29 @@ export function HulajnogaTv() {
 
 // ── Controller ──────────────────────────────────────────────────
 
+export function PreBitwyTransitionController() {
+  const { state, closeStatus } = useGame();
+  if (state.preBitwyPhase !== "zuker-call") return null;
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-2xl border-2 border-cyan-400/60 bg-black/50 p-5 text-center">
+        <p className="text-base leading-snug text-white/90">{PRE_BITWY_ZUKER_INTRO}</p>
+        <p className="mt-4 text-sm font-bold text-cyan-300">Żuker:</p>
+        <p className="mt-1 text-base text-white/90">&quot;{PRE_BITWY_ZUKER_LINE}&quot;</p>
+        <p className="mt-4 text-sm italic text-white/70">{PRE_BITWY_NARRATOR}</p>
+      </div>
+      <motion.button
+        whileTap={{ scale: 0.97 }}
+        onClick={closeStatus}
+        className="w-full rounded-2xl bg-fuchsia-600 p-6 text-2xl font-black uppercase"
+      >
+        Dalej → BITWY
+      </motion.button>
+    </div>
+  );
+}
+
 export function HulajnogaController() {
   const {
     state,
@@ -213,6 +277,20 @@ export function HulajnogaController() {
     hulajnogaClick,
   } = useGame();
   useTick(50);
+  const clickLock = useRef(false);
+
+  const handleHulajnogaPush = useCallback(() => {
+    if (clickLock.current || state.hulajnogaResult) return;
+    clickLock.current = true;
+    hulajnogaClick();
+    requestAnimationFrame(() => {
+      clickLock.current = false;
+    });
+  }, [hulajnogaClick, state.hulajnogaResult]);
+
+  if (state.preBitwyPhase === "zuker-call") {
+    return <PreBitwyTransitionController />;
+  }
 
   if (state.postBitwyPhase === "transition") {
     return (
@@ -350,13 +428,17 @@ export function HulajnogaController() {
       <p className="text-center text-xl font-black text-white">
         {state.hulajnogaClicks} / {HULAJNOGA_REQUIRED_CLICKS}
       </p>
-      <motion.button
-        whileTap={{ scale: 0.95 }}
-        onClick={hulajnogaClick}
-        className="w-full rounded-2xl border-4 border-rose-300 bg-gradient-to-b from-rose-500 to-amber-600 p-10 text-4xl font-black uppercase text-white shadow-[0_0_40px_rgba(244,63,94,0.5)] touch-manipulation"
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          handleHulajnogaPush();
+        }}
+        className="w-full select-none rounded-2xl border-4 border-rose-300 bg-gradient-to-b from-rose-500 to-amber-600 p-10 text-4xl font-black uppercase text-white shadow-[0_0_40px_rgba(244,63,94,0.5)] active:scale-95"
+        style={{ touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}
       >
         🛴 ODPYCHAJ SIĘ
-      </motion.button>
+      </button>
     </div>
   );
 }

@@ -294,14 +294,14 @@ export function SecretUnderBarController() {
             onClick={secretContinueJourney}
             className="w-full rounded-2xl bg-fuchsia-600 p-6 text-2xl font-black uppercase"
           >
-            Idę dalej
+            IDĘ DALEJ
           </motion.button>
           <motion.button
             whileTap={{ scale: 0.97 }}
             onClick={secretChooseUnderBar}
             className="w-full rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-rose-600/80 to-amber-500/80 p-6 text-xl font-black uppercase"
           >
-            Sprawdź sekret pod barem
+            SEKRET POD BAREM
           </motion.button>
         </>
       )}
@@ -361,9 +361,6 @@ export function SecretUnderBarController() {
 
       {phase === "reveal" && (
         <>
-          <div className="rounded-2xl border-2 border-rose-400 bg-rose-950/50 p-5 text-center">
-            <p className="text-xl font-bold">Pułapka aktywowana. Wracamy do gry.</p>
-          </div>
           <motion.button
             whileTap={{ scale: 0.97 }}
             onClick={secretFinishReveal}

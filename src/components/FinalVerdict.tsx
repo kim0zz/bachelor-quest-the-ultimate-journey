@@ -91,61 +91,81 @@ export function FinalVerdict() {
     },
   ].filter(Boolean) as { icon: string; title: string; desc: string }[];
 
+  const visitedCount = keyLocations ? keyLocations.split(" • ").length : 0;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-6 backdrop-blur-md">
-      <motion.div
-        initial={{ scale: 0.7, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 120, damping: 14 }}
-        className="w-full max-w-5xl rounded-3xl border-2 border-amber-400 bg-gradient-to-br from-purple-950 via-fuchsia-950 to-slate-950 p-12 text-center shadow-[0_0_120px_rgba(251,191,36,0.5)]"
-      >
-        <div className="text-2xl uppercase tracking-[0.4em] text-amber-300">
-          DOM / KONOPA
-        </div>
-        <div className="my-6 text-8xl">🏠</div>
-        <p className="mx-auto max-w-3xl text-xl text-white/75">
-          Lama dociera na KONOPA na autopilocie. Szedł zygzakiem, ale dotarł. W jego stanie to już logistyka klasy premium.
-        </p>
-        <h1 className="text-7xl md:text-8xl font-black text-white drop-shadow-[0_4px_30px_rgba(217,70,239,0.5)]">
-          {verdict.title}
-        </h1>
-        <p className="mt-6 text-3xl text-white/80">{verdict.subtitle}</p>
-
-        <div className="mt-10 flex flex-wrap justify-center gap-6 text-2xl text-white">
-          <div className="rounded-2xl border border-fuchsia-400 bg-black/40 px-6 py-3">
-            💍 {state.manPoints} Mąż Points
-          </div>
-          <div className="rounded-2xl border border-amber-400 bg-black/40 px-6 py-3">
-            🥃 {state.shotCount} shotów
-          </div>
-          <div className="rounded-2xl border border-cyan-400 bg-black/40 px-6 py-3">
-            🍻 {state.teamShots} team shots
-          </div>
-        </div>
-
-        <div className="mt-8 rounded-2xl border border-white/15 bg-black/40 px-6 py-4 text-left">
-          <div className="text-sm uppercase tracking-widest text-white/50">Zaliczone lokacje</div>
-          <p className="mt-2 text-lg text-white/85">{keyLocations || "Brak danych"}</p>
-        </div>
-
-        <div className="mt-6 grid grid-cols-1 gap-3 text-left md:grid-cols-2">
-          {badges.map((badge) => (
-            <div key={badge.title} className="rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-4">
-              <div className="text-lg font-black text-cyan-200">
-                {badge.icon} {badge.title}
-              </div>
-              <div className="mt-1 text-sm text-white/75">{badge.desc}</div>
-            </div>
-          ))}
-        </div>
-
-        <button
-          onClick={reset}
-          className="mt-10 rounded-2xl bg-fuchsia-500 px-10 py-5 text-2xl font-black uppercase text-white shadow-[0_0_40px_rgba(217,70,239,0.7)] hover:bg-fuchsia-400"
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/90 p-4 backdrop-blur-md md:p-6">
+      <div className="mx-auto flex min-h-full max-w-7xl items-center justify-center py-4">
+        <motion.div
+          initial={{ scale: 0.7, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 120, damping: 14 }}
+          className="w-full rounded-3xl border-2 border-amber-400 bg-gradient-to-br from-purple-950 via-fuchsia-950 to-slate-950 p-6 text-center shadow-[0_0_120px_rgba(251,191,36,0.5)] md:p-10"
         >
-          Nowa Gra
-        </button>
-      </motion.div>
+          <div className="text-sm uppercase tracking-[0.35em] text-amber-300">
+            DOM / KONOPA
+          </div>
+          <div className="my-4 text-6xl md:text-7xl">🏠</div>
+          <p className="mx-auto max-w-4xl text-lg text-white/75 md:text-xl">
+            Lama dociera na KONOPA na autopilocie. Szedł zygzakiem, ale dotarł. W jego stanie to już
+            logistyka klasy premium.
+          </p>
+          <h1 className="mt-4 text-5xl font-black text-white drop-shadow-[0_4px_30px_rgba(217,70,239,0.5)] md:text-7xl">
+            {verdict.title}
+          </h1>
+          <p className="mt-3 text-xl text-white/80 md:text-2xl">{verdict.subtitle}</p>
+
+          <div className="mt-6 grid grid-cols-2 gap-3 text-white md:grid-cols-4 md:gap-4">
+            <div className="rounded-2xl border border-fuchsia-400 bg-black/40 px-4 py-3 md:py-4">
+              <div className="text-xs uppercase text-white/50 md:text-sm">Mąż Points</div>
+              <div className="text-2xl font-black md:text-3xl">💍 {state.manPoints}</div>
+            </div>
+            <div className="rounded-2xl border border-amber-400 bg-black/40 px-4 py-3 md:py-4">
+              <div className="text-xs uppercase text-white/50 md:text-sm">Lama Shots</div>
+              <div className="text-2xl font-black md:text-3xl">🥃 {state.shotCount}</div>
+            </div>
+            <div className="rounded-2xl border border-cyan-400 bg-black/40 px-4 py-3 md:py-4">
+              <div className="text-xs uppercase text-white/50 md:text-sm">Team Shots</div>
+              <div className="text-2xl font-black md:text-3xl">🍻 {state.teamShots}</div>
+            </div>
+            <div className="rounded-2xl border border-emerald-400 bg-black/40 px-4 py-3 md:py-4">
+              <div className="text-xs uppercase text-white/50 md:text-sm">Lokacje</div>
+              <div className="text-2xl font-black md:text-3xl">📍 {visitedCount}</div>
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-white/15 bg-black/40 px-4 py-3 text-left md:px-6">
+            <div className="text-xs uppercase tracking-widest text-white/50">
+              Zaliczone lokacje
+            </div>
+            <p className="mt-1 text-sm text-white/85 md:text-base">
+              {keyLocations || "Brak danych"}
+            </p>
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-2 text-left sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {badges.map((badge) => (
+              <div
+                key={badge.title}
+                className="rounded-xl border border-cyan-400/40 bg-cyan-950/20 p-3 md:p-4"
+              >
+                <div className="text-base font-black text-cyan-200 md:text-lg">
+                  {badge.icon} {badge.title}
+                </div>
+                <div className="mt-1 text-xs text-white/75 md:text-sm">{badge.desc}</div>
+              </div>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={reset}
+            className="mt-6 rounded-2xl bg-fuchsia-500 px-8 py-4 text-xl font-black uppercase text-white shadow-[0_0_40px_rgba(217,70,239,0.7)] hover:bg-fuchsia-400 md:mt-8 md:px-10 md:py-5 md:text-2xl"
+          >
+            Nowa Gra
+          </button>
+        </motion.div>
+      </div>
     </div>
   );
 }

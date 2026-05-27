@@ -76,11 +76,12 @@ function BitwyIntroTv() {
         Bitwy. Miejsce, gdzie kiedyś mieszkał Żuker, Bewicz i jakaś random typiara, ale tak naprawdę mieszkał tam alkohol, chaos i decyzje bez właściciela.
       </p>
       <div className="mx-auto mt-8 max-w-3xl rounded-2xl border border-amber-400/40 bg-amber-950/30 p-6">
-        <p className="text-lg text-amber-200 italic">
-          🚪 Skiba łapie Lamę w korytarzu:
+        <p className="text-xl font-bold text-amber-200">
+          Skiba łapie Lamę w korytarzu.
         </p>
+        <p className="mt-2 text-sm uppercase tracking-widest text-amber-300/80">Skiba:</p>
         <p className="mt-2 text-2xl font-bold text-white/90">
-          &quot;Lama, kurwa, chodź do kuchni na dwa szybkie i bajerę. Salon nie ucieknie, a ja mam temat życia.&quot;
+          &quot;Lama, kurwa, chodź do kuchni na chwilę. Pokój Bewicza nie ucieknie.&quot;
         </p>
       </div>
       <p className="mt-8 text-lg text-white/50">Wybierz na kontrolerze 📱</p>
@@ -166,7 +167,7 @@ function BitwySalonNarratorTv() {
             : `${GROOM.nickname} próbuje zachować klasę i ominąć kuchnię. Skiba zapamięta ten brak lojalności.`}
       </p>
       <p className="mx-auto mt-6 max-w-3xl text-2xl text-white/70">
-        W salonie {GROOM.nickname} siada i nalewa sobie shota. Na BITWY nie pytają, czy pijesz. Pytają, czy potrafisz nalać.
+        W Pokoju Bewicza {GROOM.nickname} siada i nalewa sobie shota. Na BITWY nie pytają, czy pijesz. Pytają, czy potrafisz nalać.
       </p>
       <p className="mt-8 text-lg text-white/50">Kontynuuj na kontrolerze 📱</p>
     </TvCard>
@@ -396,8 +397,8 @@ function BitwyIntroCtrl({ chooseBitwyPath }: { chooseBitwyPath: (k: boolean) => 
       >
         <span className="text-4xl">🍳</span>
         <div>
-          <div className="text-xl font-black">Idę do kuchni do Skiby</div>
-          <div className="text-sm text-white/60">Dwa shoty + życiówka</div>
+          <div className="text-xl font-black">Idę ze Skibą do kuchni</div>
+          <div className="text-sm text-white/60">Brzmi jak zły pomysł, czyli standard.</div>
         </div>
       </motion.button>
       <motion.button
@@ -407,7 +408,7 @@ function BitwyIntroCtrl({ chooseBitwyPath }: { chooseBitwyPath: (k: boolean) => 
       >
         <span className="text-4xl">🛋️</span>
         <div>
-          <div className="text-xl font-black">Idę do salonu</div>
+          <div className="text-xl font-black">Idę do Pokoju Bewicza</div>
           <div className="text-sm text-white/60">Przywitać się z ludźmi</div>
         </div>
       </motion.button>
@@ -533,7 +534,7 @@ function BitwyConfessionCtrl({ advance }: { advance: () => void }) {
         onClick={advance}
         className="w-full rounded-2xl bg-fuchsia-600 p-6 text-2xl font-black uppercase"
       >
-        🛋️ Idę do salonu
+        🛋️ Idę do Pokoju Bewicza
       </motion.button>
     </div>
   );
@@ -561,7 +562,7 @@ function BitwySalonNarratorCtrl({
       </div>
       <div className="rounded-2xl border border-white/20 bg-white/5 p-4 text-center">
         <p className="text-sm text-white/70">
-          W salonie {GROOM.nickname} siada i nalewa sobie shota. Na BITWY nie pytają, czy pijesz. Pytają, czy potrafisz nalać.
+          W Pokoju Bewicza {GROOM.nickname} siada i nalewa sobie shota. Na BITWY nie pytają, czy pijesz. Pytają, czy potrafisz nalać.
         </p>
       </div>
       <motion.button

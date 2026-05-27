@@ -8,7 +8,7 @@ import { StatusBurst } from "@/components/StatusBurst";
 import { FinalVerdict } from "@/components/FinalVerdict";
 import { SecretUnderBarTv } from "@/components/SecretUnderBar";
 import { BitwyTv } from "@/components/Bitwy";
-import { PostBitwyTransitionTv, HulajnogaTv } from "@/components/Hulajnoga";
+import { PreBitwyTransitionTv, PostBitwyTransitionTv, HulajnogaTv } from "@/components/Hulajnoga";
 import { DzialkaTv } from "@/components/Dzialka";
 import { ParyzTv } from "@/components/Paryz";
 import { RealtimeIndicator } from "@/components/RealtimeIndicator";
@@ -154,6 +154,7 @@ function TvInner() {
       <StatusBurst />
       <SecretUnderBarTv />
       <BitwyTv />
+      <PreBitwyTransitionTv />
       <PostBitwyTransitionTv />
       <HulajnogaTv />
       <DzialkaTv />

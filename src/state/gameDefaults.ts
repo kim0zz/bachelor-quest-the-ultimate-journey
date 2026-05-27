@@ -46,6 +46,9 @@ export function createInitialGameState() {
     balanceStartTime: null as number | null,
     balanceStopPosition: null as number | null,
     postBitwyPhase: null as "transition" | null,
+    preBitwyPhase: null as "zuker-call" | null,
+    pendingMpSecretOffer: false,
+    pendingZukerCall: false,
     postDrewniakPhase: null as
       | "hulajnoga-choice"
       | "hulajnoga-skip-narrator"
