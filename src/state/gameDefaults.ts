@@ -3,6 +3,7 @@ import { type PourResult } from "@/data/gameData";
 function emptyPourState() {
   return {
     pourLevel: 0,
+    pourStartedAt: null as number | null,
     pourIsPouring: false,
     pourEvaluated: false,
     pourResult: null as PourResult | null,
@@ -56,6 +57,7 @@ export function createInitialGameState() {
       | "hulajnoga-result"
       | null,
     hulajnogaStartedAt: null as number | null,
+    hulajnogaEndsAt: null as number | null,
     hulajnogaClicks: 0,
     hulajnogaResult: null as "success" | "fail" | null,
     dzialkaPhase: null as string | null,

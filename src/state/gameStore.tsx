@@ -18,7 +18,6 @@ import {
   BALANCE_TARGET_MAX,
   BALANCE_POINTS,
   POST_BITWY_TRANSITION_TEXT,
-  HULAJNOGA_DURATION_MS,
   HULAJNOGA_REQUIRED_CLICKS,
   HULAJNOGA_POINTS,
   DZIALKA_RAP,
@@ -35,6 +34,9 @@ import {
   type Location,
   type PourResult,
 } from "@/data/gameData";
+import { isControllerClient } from "@/lib/clientRole";
+import { computeHulajnogaEndsAt } from "@/lib/hulajnogaDisplay";
+import { computePourDisplayLevel } from "@/lib/pourLevel";
 import { createInitialGameState } from "@/state/gameDefaults";
 import {
   useGameRoomSync,
@@ -50,10 +52,25 @@ const POUR_TICK_MS = 50;
 function emptyPourState() {
   return {
     pourLevel: 0,
+    pourStartedAt: null as number | null,
     pourIsPouring: false,
     pourEvaluated: false,
     pourResult: null as PourResult | null,
   };
+}
+
+function getPourFillSpeed(loc: Location): number {
+  return loc.fillSpeed ?? 45;
+}
+
+function resolvePourLevelForStop(s: GameState, loc: Location): number {
+  return computePourDisplayLevel(
+    s.pourStartedAt,
+    s.pourIsPouring,
+    s.pourEvaluated,
+    s.pourLevel,
+    getPourFillSpeed(loc),
+  );
 }
 
 function evaluatePourState(s: GameState, level: number, loc: Location) {
@@ -150,6 +167,7 @@ export interface GameState {
   secretUnderBarShotsConfirmed: number;
   secretShotPulse: number;
   pourLevel: number;
+  pourStartedAt: number | null;
   pourIsPouring: boolean;
   pourEvaluated: boolean;
   pourResult: PourResult | null;
@@ -169,6 +187,7 @@ export interface GameState {
   pendingZukerCall: boolean;
   postDrewniakPhase: PostDrewniakPhase;
   hulajnogaStartedAt: number | null;
+  hulajnogaEndsAt: number | null;
   hulajnogaClicks: number;
   hulajnogaResult: HulajnogaResult;
   dzialkaPhase: DzialkaPhase;
@@ -189,6 +208,7 @@ function emptyHulajnogaState() {
   return {
     postDrewniakPhase: null as PostDrewniakPhase,
     hulajnogaStartedAt: null as number | null,
+    hulajnogaEndsAt: null as number | null,
     hulajnogaClicks: 0,
     hulajnogaResult: null as HulajnogaResult,
   };
@@ -1037,19 +1057,28 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const startPouring = useCallback(() => {
+    if (!isControllerClient()) return;
     setState((s) => {
       const loc = LOCATIONS.find((l) => l.id === s.activeQuestId);
-      if (!loc || !canPour(loc, s) || s.pourEvaluated) return s;
-      return { ...s, pourIsPouring: true };
+      if (!loc || !canPour(loc, s) || s.pourEvaluated || s.pourIsPouring) return s;
+      const now = Date.now();
+      return {
+        ...s,
+        pourIsPouring: true,
+        pourStartedAt: now,
+        pourLevel: 0,
+      };
     });
   }, []);
 
   const stopPouring = useCallback(() => {
+    if (!isControllerClient()) return;
     setState((s) => {
       const loc = LOCATIONS.find((l) => l.id === s.activeQuestId);
       if (!loc || !canPour(loc, s) || s.pourEvaluated) return s;
       if (!s.pourIsPouring) return s;
-      return { ...s, ...evaluatePourState(s, s.pourLevel, loc) };
+      const level = resolvePourLevelForStop(s, loc);
+      return { ...s, ...evaluatePourState(s, level, loc) };
     });
   }, []);
 
@@ -1093,7 +1122,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  // Controller-only: auto-stop at 100% without syncing pourLevel every frame.
   useEffect(() => {
+    if (!isControllerClient()) return;
     if (!state.pourIsPouring || state.pourEvaluated) return;
     const loc = locations.find((l) => l.id === state.activeQuestId);
     if (!loc || !canPour(loc, state)) return;
@@ -1103,13 +1134,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
         if (!s.pourIsPouring || s.pourEvaluated) return s;
         const activeLoc = locations.find((l) => l.id === s.activeQuestId);
         if (!activeLoc || !canPour(activeLoc, s)) return s;
-        const speed = activeLoc.fillSpeed ?? 45;
-        const delta = (speed * POUR_TICK_MS) / 1000;
-        const next = Math.min(100, s.pourLevel + delta);
-        if (next >= 100) {
+        const level = resolvePourLevelForStop(s, activeLoc);
+        if (level >= 100) {
           return { ...s, ...evaluatePourState(s, 100, activeLoc) };
         }
-        return { ...s, pourLevel: next };
+        return s;
       });
     }, POUR_TICK_MS);
     return () => clearInterval(id);
@@ -1259,12 +1288,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const startHulajnoga = useCallback(() => {
+    if (!isControllerClient()) return;
     setState((s) => {
       if (s.postDrewniakPhase !== "hulajnoga-choice") return s;
+      const now = Date.now();
       return {
         ...s,
         postDrewniakPhase: "hulajnoga-running",
-        hulajnogaStartedAt: Date.now(),
+        hulajnogaStartedAt: now,
+        hulajnogaEndsAt: computeHulajnogaEndsAt(now),
         hulajnogaClicks: 0,
         hulajnogaResult: null,
         status: { kind: "questActive" as const, message: "HULAJNOGA HIGH RISK" },
@@ -1273,6 +1305,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const hulajnogaClick = useCallback(() => {
+    if (!isControllerClient()) return;
     setState((s) => {
       if (s.postDrewniakPhase !== "hulajnoga-running" || s.hulajnogaResult) return s;
       const next = s.hulajnogaClicks + 1;
@@ -1283,34 +1316,35 @@ export function GameProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  // Controller-only fail timer (uses endsAt set at start).
   useEffect(() => {
-    if (
-      state.postDrewniakPhase !== "hulajnoga-running" ||
-      !state.hulajnogaStartedAt ||
-      state.hulajnogaResult
-    ) {
+    if (!isControllerClient()) return;
+    if (state.postDrewniakPhase !== "hulajnoga-running" || state.hulajnogaResult) {
       return;
     }
-    const elapsed = Date.now() - state.hulajnogaStartedAt;
-    if (elapsed >= HULAJNOGA_DURATION_MS) {
+    const endsAt = state.hulajnogaEndsAt;
+    if (endsAt == null) return;
+
+    const remaining = endsAt - Date.now();
+    if (remaining <= 0) {
       setState((s) => {
         if (s.postDrewniakPhase !== "hulajnoga-running" || s.hulajnogaResult) return s;
         return applyHulajnogaResult(s, false);
       });
       return;
     }
-    const remaining = HULAJNOGA_DURATION_MS - elapsed;
+
     const t = setTimeout(() => {
       setState((s) => {
         if (s.postDrewniakPhase !== "hulajnoga-running" || s.hulajnogaResult) return s;
-        if (Date.now() - (s.hulajnogaStartedAt ?? 0) >= HULAJNOGA_DURATION_MS) {
+        if (s.hulajnogaEndsAt != null && Date.now() >= s.hulajnogaEndsAt) {
           return applyHulajnogaResult(s, false);
         }
         return s;
       });
     }, remaining);
     return () => clearTimeout(t);
-  }, [state.postDrewniakPhase, state.hulajnogaStartedAt, state.hulajnogaResult]);
+  }, [state.postDrewniakPhase, state.hulajnogaEndsAt, state.hulajnogaResult]);
 
   const advanceDzialka = useCallback(() => {
     setState((s) => {

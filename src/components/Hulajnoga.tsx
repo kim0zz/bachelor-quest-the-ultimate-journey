@@ -1,23 +1,18 @@
-import { useCallback, useRef } from "react";
+import { useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   GROOM,
   GROOM_AVATAR_URL,
-  HULAJNOGA_DURATION_MS,
   HULAJNOGA_REQUIRED_CLICKS,
   PRE_BITWY_NARRATOR,
   PRE_BITWY_ZUKER_INTRO,
   PRE_BITWY_ZUKER_LINE,
 } from "@/data/gameData";
+import {
+  getHulajnogaProgress,
+  getHulajnogaRemainingSeconds,
+} from "@/lib/hulajnogaDisplay";
 import { useGame, useTick } from "@/state/gameStore";
-
-function getHulajnogaRemaining(startedAt: number): number {
-  return Math.max(0, Math.ceil((HULAJNOGA_DURATION_MS - (Date.now() - startedAt)) / 1000));
-}
-
-function getHulajnogaProgress(clicks: number): number {
-  return Math.min(100, (clicks / HULAJNOGA_REQUIRED_CLICKS) * 100);
-}
 
 // ── TV ──────────────────────────────────────────────────────────
 
@@ -178,8 +173,7 @@ export function HulajnogaTv() {
   if (state.postDrewniakPhase !== "hulajnoga-running") return null;
   if (state.hulajnogaResult) return null;
 
-  const startedAt = state.hulajnogaStartedAt ?? Date.now();
-  const remaining = getHulajnogaRemaining(startedAt);
+  const remaining = getHulajnogaRemainingSeconds(state.hulajnogaEndsAt);
   const progress = getHulajnogaProgress(state.hulajnogaClicks);
 
   return (
@@ -277,16 +271,16 @@ export function HulajnogaController() {
     hulajnogaClick,
   } = useGame();
   useTick(50);
-  const clickLock = useRef(false);
+  const tapLockRef = useRef(false);
 
-  const handleHulajnogaPush = useCallback(() => {
-    if (clickLock.current || state.hulajnogaResult) return;
-    clickLock.current = true;
+  const handleHulajnogaPush = () => {
+    if (tapLockRef.current || state.hulajnogaResult) return;
+    tapLockRef.current = true;
     hulajnogaClick();
-    requestAnimationFrame(() => {
-      clickLock.current = false;
-    });
-  }, [hulajnogaClick, state.hulajnogaResult]);
+    window.setTimeout(() => {
+      tapLockRef.current = false;
+    }, 0);
+  };
 
   if (state.preBitwyPhase === "zuker-call") {
     return <PreBitwyTransitionController />;
@@ -398,8 +392,7 @@ export function HulajnogaController() {
     return null;
   }
 
-  const startedAt = state.hulajnogaStartedAt ?? Date.now();
-  const remaining = getHulajnogaRemaining(startedAt);
+  const remaining = getHulajnogaRemainingSeconds(state.hulajnogaEndsAt);
   const progress = getHulajnogaProgress(state.hulajnogaClicks);
 
   return (
@@ -434,7 +427,8 @@ export function HulajnogaController() {
           e.preventDefault();
           handleHulajnogaPush();
         }}
-        className="w-full select-none rounded-2xl border-4 border-rose-300 bg-gradient-to-b from-rose-500 to-amber-600 p-10 text-4xl font-black uppercase text-white shadow-[0_0_40px_rgba(244,63,94,0.5)] active:scale-95"
+        disabled={!!state.hulajnogaResult}
+        className="w-full select-none rounded-2xl border-4 border-rose-300 bg-gradient-to-b from-rose-500 to-amber-600 p-10 text-4xl font-black uppercase text-white shadow-[0_0_40px_rgba(244,63,94,0.5)] active:scale-95 disabled:opacity-40"
         style={{ touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}
       >
         🛴 ODPYCHAJ SIĘ

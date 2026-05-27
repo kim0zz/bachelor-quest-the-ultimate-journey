@@ -12,32 +12,49 @@ import type { GameState } from "@/state/gameStore";
 
 export type RealtimeStatus = "local-only" | "connecting" | "connected";
 
-const POUR_WRITE_MS = 200;
+const HULAJNOGA_CLICKS_WRITE_MS = 180;
 
 function parseRemoteState(raw: unknown): GameState | null {
   if (!raw || typeof raw !== "object") return null;
   return { ...createInitialGameState(), ...(raw as Partial<GameState>) };
 }
 
-function isPourOnlyChange(prev: GameState, next: GameState): boolean {
+/** Skip Supabase write when only animated pour fill changed (derived from pourStartedAt on clients). */
+function isPourVisualOnlyChange(prev: GameState, next: GameState): boolean {
   if (prev.pourIsPouring !== next.pourIsPouring) return false;
+  if (prev.pourStartedAt !== next.pourStartedAt) return false;
   if (prev.pourEvaluated !== next.pourEvaluated) return false;
   if (prev.pourResult !== next.pourResult) return false;
-  if (prev.pourLevel !== next.pourLevel) {
-    return (
-      next.pourIsPouring &&
-      !next.pourEvaluated &&
-      prev.activeQuestId === next.activeQuestId &&
-      prev.currentLocationId === next.currentLocationId &&
-      prev.manPoints === next.manPoints &&
-      prev.shotCount === next.shotCount &&
-      prev.teamShots === next.teamShots &&
-      prev.completedIds.length === next.completedIds.length &&
-      prev.status.kind === next.status.kind &&
-      prev.status.message === next.status.message
-    );
-  }
-  return false;
+  if (prev.pourLevel === next.pourLevel) return false;
+  return (
+    next.pourIsPouring &&
+    !next.pourEvaluated &&
+    prev.activeQuestId === next.activeQuestId &&
+    prev.currentLocationId === next.currentLocationId &&
+    prev.manPoints === next.manPoints &&
+    prev.shotCount === next.shotCount &&
+    prev.teamShots === next.teamShots &&
+    prev.completedIds.length === next.completedIds.length &&
+    prev.status.kind === next.status.kind &&
+    prev.status.message === next.status.message
+  );
+}
+
+function isHulajnogaClicksOnlyChange(prev: GameState, next: GameState): boolean {
+  if (prev.postDrewniakPhase !== "hulajnoga-running") return false;
+  if (next.postDrewniakPhase !== "hulajnoga-running") return false;
+  if (prev.hulajnogaResult !== next.hulajnogaResult) return false;
+  if (prev.hulajnogaClicks === next.hulajnogaClicks) return false;
+  return (
+    prev.hulajnogaStartedAt === next.hulajnogaStartedAt &&
+    prev.hulajnogaEndsAt === next.hulajnogaEndsAt &&
+    prev.activeQuestId === next.activeQuestId &&
+    prev.manPoints === next.manPoints &&
+    prev.shotCount === next.shotCount &&
+    prev.teamShots === next.teamShots &&
+    prev.status.kind === next.status.kind &&
+    prev.status.message === next.status.message
+  );
 }
 
 export function useGameRoomSync(
@@ -48,7 +65,7 @@ export function useGameRoomSync(
   const roomCode = getRoomCode();
   const hydratedRef = useRef(false);
   const applyingRemoteRef = useRef(false);
-  const pourTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hulajnogaTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingStateRef = useRef<GameState | null>(null);
   const lastPushedRef = useRef<string>("");
 
@@ -94,9 +111,13 @@ export function useGameRoomSync(
     (next: GameState, prev: GameState, immediate = false) => {
       if (!hydratedRef.current || applyingRemoteRef.current) return;
 
-      if (pourTimerRef.current) {
-        clearTimeout(pourTimerRef.current);
-        pourTimerRef.current = null;
+      if (hulajnogaTimerRef.current) {
+        clearTimeout(hulajnogaTimerRef.current);
+        hulajnogaTimerRef.current = null;
+      }
+
+      if (isPourVisualOnlyChange(prev, next)) {
+        return;
       }
 
       const run = () => {
@@ -104,22 +125,22 @@ export function useGameRoomSync(
         void writeToRoom(next);
       };
 
-      if (immediate || !isPourOnlyChange(prev, next)) {
+      if (immediate || !isHulajnogaClicksOnlyChange(prev, next)) {
         run();
         return;
       }
 
       pendingStateRef.current = next;
-      pourTimerRef.current = setTimeout(run, POUR_WRITE_MS);
+      hulajnogaTimerRef.current = setTimeout(run, HULAJNOGA_CLICKS_WRITE_MS);
     },
     [writeToRoom],
   );
 
   const pushStateNow = useCallback(
     async (next: GameState) => {
-      if (pourTimerRef.current) {
-        clearTimeout(pourTimerRef.current);
-        pourTimerRef.current = null;
+      if (hulajnogaTimerRef.current) {
+        clearTimeout(hulajnogaTimerRef.current);
+        hulajnogaTimerRef.current = null;
       }
       pendingStateRef.current = null;
       lastPushedRef.current = "";
@@ -225,7 +246,7 @@ export function useGameRoomSync(
 
   useEffect(() => {
     return () => {
-      if (pourTimerRef.current) clearTimeout(pourTimerRef.current);
+      if (hulajnogaTimerRef.current) clearTimeout(hulajnogaTimerRef.current);
       if (pendingStateRef.current) {
         void writeToRoom(pendingStateRef.current);
       }

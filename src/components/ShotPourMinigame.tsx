@@ -1,8 +1,9 @@
 import { motion } from "framer-motion";
-import { useEffect, type PointerEvent } from "react";
+import { useEffect, useRef, type PointerEvent } from "react";
 import confetti from "canvas-confetti";
 import type { Location } from "@/data/gameData";
 import { ShotGlassVisual } from "@/components/ShotGlassVisual";
+import { computePourDisplayLevel } from "@/lib/pourLevel";
 import { useGame, useTick } from "@/state/gameStore";
 
 function resultSubtext(loc: Location, result: "success" | "under" | "over") {
@@ -23,8 +24,16 @@ export function ShotPourMinigameTv({ loc }: { loc: Location }) {
 
   const targetMin = loc.targetMin ?? 80;
   const targetMax = loc.targetMax ?? 95;
+  const fillSpeed = loc.fillSpeed ?? 45;
   const frozen = state.pourEvaluated;
   const result = state.pourResult;
+  const displayLevel = computePourDisplayLevel(
+    state.pourStartedAt,
+    state.pourIsPouring,
+    state.pourEvaluated,
+    state.pourLevel,
+    fillSpeed,
+  );
 
   useEffect(() => {
     if (!frozen || result !== "success") return;
@@ -42,7 +51,7 @@ export function ShotPourMinigameTv({ loc }: { loc: Location }) {
 
       <div className="mt-8 flex justify-center">
         <ShotGlassVisual
-          level={state.pourLevel}
+          level={displayLevel}
           targetMin={targetMin}
           targetMax={targetMax}
           isPouring={state.pourIsPouring && !frozen}
@@ -106,22 +115,38 @@ export function ShotPourMinigameController({ loc }: { loc: Location }) {
 
   const targetMin = loc.targetMin ?? 80;
   const targetMax = loc.targetMax ?? 95;
+  const fillSpeed = loc.fillSpeed ?? 45;
   const frozen = state.pourEvaluated;
   const result = state.pourResult;
+  const displayLevel = computePourDisplayLevel(
+    state.pourStartedAt,
+    state.pourIsPouring,
+    state.pourEvaluated,
+    state.pourLevel,
+    fillSpeed,
+  );
+  const pourStoppingRef = useRef(false);
+
+  useTick(50);
 
   const bindPour = () => ({
     onPointerDown: (e: PointerEvent<HTMLButtonElement>) => {
       e.preventDefault();
       (e.target as HTMLElement).setPointerCapture(e.pointerId);
+      pourStoppingRef.current = false;
       startPouring();
     },
     onPointerUp: (e: PointerEvent<HTMLButtonElement>) => {
       e.preventDefault();
+      if (pourStoppingRef.current) return;
+      pourStoppingRef.current = true;
       stopPouring();
     },
-    onPointerCancel: () => stopPouring(),
-    onPointerLeave: (e: PointerEvent<HTMLButtonElement>) => {
-      if (e.buttons > 0) stopPouring();
+    onPointerCancel: (e: PointerEvent<HTMLButtonElement>) => {
+      e.preventDefault();
+      if (pourStoppingRef.current) return;
+      pourStoppingRef.current = true;
+      stopPouring();
     },
   });
 
@@ -137,7 +162,7 @@ export function ShotPourMinigameController({ loc }: { loc: Location }) {
         </p>
         <div className="mt-4 flex justify-center">
           <ShotGlassVisual
-            level={state.pourLevel}
+            level={displayLevel}
             targetMin={targetMin}
             targetMax={targetMax}
             isPouring={state.pourIsPouring && !frozen}
@@ -152,6 +177,7 @@ export function ShotPourMinigameController({ loc }: { loc: Location }) {
         <button
           type="button"
           {...bindPour()}
+          style={{ touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}
           className={`w-full rounded-2xl border-4 p-10 text-5xl font-black uppercase shadow-[0_0_40px_rgba(251,191,36,0.5)] transition ${
             state.pourIsPouring
               ? "border-amber-200 bg-amber-400 text-black scale-[0.98]"
