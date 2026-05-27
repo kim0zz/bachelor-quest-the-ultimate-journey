@@ -9,6 +9,7 @@ import {
   DZIALKA_FINAL_NARRATOR1,
   DZIALKA_FINAL_NARRATOR2,
 } from "@/data/gameData";
+import { isHulajnogaLocked } from "@/lib/hulajnogaDisplay";
 import { useGame } from "@/state/gameStore";
 
 function TvCard({
@@ -33,6 +34,7 @@ function TvCard({
 
 export function DzialkaTv() {
   const { state } = useGame();
+  if (isHulajnogaLocked(state.postDrewniakPhase)) return null;
   if (state.activeQuestId !== "dzialka" || !state.dzialkaPhase) return null;
 
   const isFeedback =
@@ -115,6 +117,19 @@ export function DzialkaTv() {
               </p>
             </div>
             <p className="mt-4 text-2xl font-bold text-white">{DZIALKA_RAP.question}</p>
+            <div className="mx-auto mt-8 grid max-w-4xl gap-3 text-left">
+              {DZIALKA_RAP.answers.map((answer, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-4 rounded-2xl border-2 border-white/20 bg-white/5 p-4"
+                >
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-fuchsia-500 text-xl font-black">
+                    {String.fromCharCode(65 + i)}
+                  </span>
+                  <span className="text-lg font-mono text-white/95">{answer}</span>
+                </div>
+              ))}
+            </div>
             <p className="mt-8 text-lg text-white/50">Odpowiedz na kontrolerze 📱</p>
           </TvCard>
         )}

@@ -9,6 +9,7 @@ import { HulajnogaController } from "./Hulajnoga";
 import { DzialkaController } from "./Dzialka";
 import { ParyzController } from "./Paryz";
 import { isShotPourLocation, VERDICTS } from "@/data/gameData";
+import { isHulajnogaLocked } from "@/lib/hulajnogaDisplay";
 
 export function ControllerView() {
   const {
@@ -89,6 +90,7 @@ export function ControllerView() {
   const mpCompleted = state.completedIds.includes("male-piwko");
 
   const isFeedback =
+    !isHulajnogaLocked(state.postDrewniakPhase) &&
     (!activeQuest || state.completedIds.includes(activeQuest.id)) &&
     (state.status.kind === "correct" ||
       state.status.kind === "wrong" ||
@@ -293,7 +295,9 @@ export function ControllerView() {
               Dalej →
             </motion.button>
           </div>
-        ) : activeQuest?.id === "dzialka" && state.dzialkaPhase ? (
+        ) : activeQuest?.id === "dzialka" &&
+          state.dzialkaPhase &&
+          !isHulajnogaLocked(state.postDrewniakPhase) ? (
           <DzialkaController />
         ) : activeQuest?.id === "paryz" && state.paryzPhase ? (
           <ParyzController />

@@ -1,12 +1,13 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect } from "react";
 import confetti from "canvas-confetti";
+import { isHulajnogaLocked } from "@/lib/hulajnogaDisplay";
 import { useGame } from "@/state/gameStore";
 
 export function StatusBurst() {
   const { state, closeStatus } = useGame();
   const kind = state.status.kind;
-  if (state.postDrewniakPhase === "hulajnoga-result") return null;
+  if (isHulajnogaLocked(state.postDrewniakPhase)) return null;
   if (state.activeQuestId === "dzialka" && state.dzialkaPhase === "rap-result") return null;
   if (state.secretUnderBarPhase) return null;
   const show =

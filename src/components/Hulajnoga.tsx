@@ -1,4 +1,11 @@
-import { useRef } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+  type PointerEvent,
+  type ReactNode,
+} from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   GROOM,
@@ -13,6 +20,23 @@ import {
   getHulajnogaRemainingSeconds,
 } from "@/lib/hulajnogaDisplay";
 import { useGame, useTick } from "@/state/gameStore";
+
+const HULAJNOGA_OVERLAY_Z = "z-[60]";
+
+function HulajnogaLockShell({ children }: { children: ReactNode }) {
+  return (
+    <div
+      className={`fixed inset-0 ${HULAJNOGA_OVERLAY_Z} flex flex-col overflow-y-auto bg-slate-950 p-4`}
+      style={{ touchAction: "manipulation" }}
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center">
+        {children}
+      </div>
+    </div>
+  );
+}
 
 // ── TV ──────────────────────────────────────────────────────────
 
@@ -92,7 +116,7 @@ export function HulajnogaTv() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-30 flex items-center justify-center bg-black/80 backdrop-blur-md p-6"
+          className={`fixed inset-0 ${HULAJNOGA_OVERLAY_Z} flex items-center justify-center bg-black/80 backdrop-blur-md p-6`}
         >
           <motion.div
             initial={{ scale: 0.85, y: 30 }}
@@ -146,7 +170,7 @@ export function HulajnogaTv() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-30 flex items-center justify-center bg-black/80 backdrop-blur-md p-6"
+          className={`fixed inset-0 ${HULAJNOGA_OVERLAY_Z} flex items-center justify-center bg-black/80 backdrop-blur-md p-6`}
         >
           <motion.div
             initial={{ scale: 0.85, y: 30 }}
@@ -182,7 +206,7 @@ export function HulajnogaTv() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-30 flex items-center justify-center bg-black/80 backdrop-blur-md p-6"
+        className={`fixed inset-0 ${HULAJNOGA_OVERLAY_Z} flex items-center justify-center bg-black/80 backdrop-blur-md p-6`}
       >
         <motion.div
           initial={{ scale: 0.85, y: 30 }}
@@ -269,17 +293,48 @@ export function HulajnogaController() {
     skipHulajnoga,
     startHulajnoga,
     hulajnogaClick,
+    acknowledgeHulajnogaResult,
   } = useGame();
   useTick(50);
   const tapLockRef = useRef(false);
+  const dalejLockRef = useRef(false);
+  const [dalejReady, setDalejReady] = useState(false);
 
-  const handleHulajnogaPush = () => {
-    if (tapLockRef.current || state.hulajnogaResult) return;
+  useEffect(() => {
+    if (state.postDrewniakPhase !== "hulajnoga-result") {
+      setDalejReady(false);
+      dalejLockRef.current = false;
+      return;
+    }
+    setDalejReady(false);
+    dalejLockRef.current = false;
+    const t = window.setTimeout(() => setDalejReady(true), 450);
+    return () => window.clearTimeout(t);
+  }, [state.postDrewniakPhase, state.hulajnogaResult]);
+
+  const handleHulajnogaPush = (e: MouseEvent | PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (
+      tapLockRef.current ||
+      state.hulajnogaResult ||
+      state.postDrewniakPhase !== "hulajnoga-running"
+    ) {
+      return;
+    }
     tapLockRef.current = true;
     hulajnogaClick();
     window.setTimeout(() => {
       tapLockRef.current = false;
-    }, 0);
+    }, 180);
+  };
+
+  const handleAcknowledgeResult = (e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!dalejReady || dalejLockRef.current) return;
+    dalejLockRef.current = true;
+    acknowledgeHulajnogaResult();
   };
 
   if (state.preBitwyPhase === "zuker-call") {
@@ -305,6 +360,7 @@ export function HulajnogaController() {
 
   if (state.postDrewniakPhase === "hulajnoga-choice") {
     return (
+      <HulajnogaLockShell>
       <div className="space-y-4">
         <div className="text-center">
           <div className="text-5xl mb-2">🛴</div>
@@ -337,11 +393,13 @@ export function HulajnogaController() {
           </div>
         </motion.button>
       </div>
+      </HulajnogaLockShell>
     );
   }
 
   if (state.postDrewniakPhase === "hulajnoga-skip-narrator") {
     return (
+      <HulajnogaLockShell>
       <div className="space-y-3">
         <div className="rounded-2xl border-2 border-cyan-400/60 bg-black/50 p-5 text-center">
           <p className="text-base text-white/90">{state.status.message}</p>
@@ -354,13 +412,14 @@ export function HulajnogaController() {
           Dalej →
         </motion.button>
       </div>
+      </HulajnogaLockShell>
     );
   }
 
   if (state.postDrewniakPhase === "hulajnoga-result") {
     const success = state.hulajnogaResult === "success";
-    return (
-      <div className="space-y-4">
+    const resultUi = (
+      <div className="space-y-6">
         <div
           className={`rounded-2xl border-2 p-5 text-center ${
             success
@@ -377,15 +436,18 @@ export function HulajnogaController() {
             <p className="mt-2 text-lg font-bold text-rose-300">🥃 Lama pije</p>
           )}
         </div>
-        <motion.button
-          whileTap={{ scale: 0.97 }}
-          onClick={closeStatus}
-          className="w-full rounded-2xl bg-fuchsia-600 p-6 text-2xl font-black uppercase"
+        <button
+          type="button"
+          disabled={!dalejReady}
+          onClick={handleAcknowledgeResult}
+          className="w-full select-none rounded-2xl bg-fuchsia-600 p-6 text-2xl font-black uppercase text-white disabled:opacity-40"
+          style={{ touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}
         >
           Dalej →
-        </motion.button>
+        </button>
       </div>
     );
+    return <HulajnogaLockShell>{resultUi}</HulajnogaLockShell>;
   }
 
   if (state.postDrewniakPhase !== "hulajnoga-running" || state.hulajnogaResult) {
@@ -395,8 +457,8 @@ export function HulajnogaController() {
   const remaining = getHulajnogaRemainingSeconds(state.hulajnogaEndsAt);
   const progress = getHulajnogaProgress(state.hulajnogaClicks);
 
-  return (
-    <div className="space-y-4 select-none">
+  const runningUi = (
+    <div className="flex flex-1 flex-col justify-center gap-4 select-none">
       <div className="text-center">
         <h3 className="text-2xl font-black uppercase text-rose-300">HULAJNOGA</h3>
         <p className="mt-1 text-sm text-white/70">
@@ -423,16 +485,15 @@ export function HulajnogaController() {
       </p>
       <button
         type="button"
-        onClick={(e) => {
-          e.preventDefault();
-          handleHulajnogaPush();
-        }}
+        onPointerDown={handleHulajnogaPush}
+        onClick={handleHulajnogaPush}
         disabled={!!state.hulajnogaResult}
-        className="w-full select-none rounded-2xl border-4 border-rose-300 bg-gradient-to-b from-rose-500 to-amber-600 p-10 text-4xl font-black uppercase text-white shadow-[0_0_40px_rgba(244,63,94,0.5)] active:scale-95 disabled:opacity-40"
+        className="mt-auto w-full select-none rounded-2xl border-4 border-rose-300 bg-gradient-to-b from-rose-500 to-amber-600 p-10 text-4xl font-black uppercase text-white shadow-[0_0_40px_rgba(244,63,94,0.5)] active:scale-95 disabled:opacity-40"
         style={{ touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}
       >
         🛴 ODPYCHAJ SIĘ
       </button>
     </div>
   );
+  return <HulajnogaLockShell>{runningUi}</HulajnogaLockShell>;
 }

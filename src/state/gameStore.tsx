@@ -417,6 +417,7 @@ interface Ctx {
   skipHulajnoga: () => void;
   startHulajnoga: () => void;
   hulajnogaClick: () => void;
+  acknowledgeHulajnogaResult: () => void;
   advanceDzialka: () => void;
   answerDzialkaRap: (index: number) => void;
   chooseDzialkaRoute: (route: "paryz" | "dom-zgon") => void;
@@ -839,12 +840,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
         };
       }
       if (s.postDrewniakPhase === "hulajnoga-skip-narrator") {
-        return routeToDzialka(s);
-      }
-      if (
-        s.postDrewniakPhase === "hulajnoga-result" &&
-        (s.status.kind === "correct" || s.status.kind === "groomDrinks")
-      ) {
         return routeToDzialka(s);
       }
       if (
@@ -1357,6 +1352,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(t);
   }, [state.postDrewniakPhase, state.hulajnogaEndsAt, state.hulajnogaResult]);
 
+  const acknowledgeHulajnogaResult = useCallback(() => {
+    if (!isControllerClient()) return;
+    setState((s) => {
+      if (s.postDrewniakPhase !== "hulajnoga-result" || !s.hulajnogaResult) return s;
+      return routeToDzialka(s);
+    });
+  }, []);
+
   const advanceDzialka = useCallback(() => {
     setState((s) => {
       if (s.activeQuestId !== "dzialka" || !s.dzialkaPhase) return s;
@@ -1638,6 +1641,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     skipHulajnoga,
     startHulajnoga,
     hulajnogaClick,
+    acknowledgeHulajnogaResult,
     advanceDzialka,
     answerDzialkaRap,
     chooseDzialkaRoute,
