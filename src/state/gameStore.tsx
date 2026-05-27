@@ -36,7 +36,11 @@ import {
 } from "@/data/gameData";
 import { isControllerClient, isTvClient } from "@/lib/clientRole";
 import { getSupabase } from "@/lib/supabase";
-import { computeHulajnogaEndsAt } from "@/lib/hulajnogaDisplay";
+import {
+  computeHulajnogaEndsAt,
+  isHulajnogaInputActive,
+} from "@/lib/hulajnogaDisplay";
+import { hulajnogaDebug } from "@/lib/hulajnogaDebug";
 import { computePourDisplayLevel } from "@/lib/pourLevel";
 import { createInitialGameState } from "@/state/gameDefaults";
 import {
@@ -255,7 +259,19 @@ function startDzialkaQuest(s: GameState): GameState {
   };
 }
 
-function routeToDzialka(s: GameState): GameState {
+function routeToDzialka(s: GameState, fromAcknowledge = false): GameState {
+  if (isHulajnogaInputActive(s.postDrewniakPhase) && !fromAcknowledge) {
+    hulajnogaDebug("blocked routeToDzialka", {
+      phase: s.postDrewniakPhase,
+      clicks: s.hulajnogaClicks,
+      result: s.hulajnogaResult,
+    });
+    return s;
+  }
+  hulajnogaDebug("routeToDzialka", {
+    phase: s.postDrewniakPhase,
+    fromAcknowledge,
+  });
   return startDzialkaQuest({
     ...s,
     postBitwyPhase: null,
@@ -533,6 +549,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const loc = locations.find((l) => l.id === id);
       if (!loc) return;
       setState((s) => {
+        if (isHulajnogaInputActive(s.postDrewniakPhase)) {
+          hulajnogaDebug("goToLocation blocked during hulajnoga", id);
+          return s;
+        }
         // During food choice, intercept food destinations
         if (s.foodPhase === "choosing") {
           if (id === "pekin-bar") {
@@ -721,6 +741,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const closeStatus = useCallback(() => {
     setState((s) => {
+      if (isHulajnogaInputActive(s.postDrewniakPhase)) {
+        hulajnogaDebug("closeStatus ignored during hulajnoga", s.postDrewniakPhase);
+        return s;
+      }
       if (s.secretUnderBarPhase === "offer") {
         return { ...s, status: { kind: "idle", message: "Decyzja na kontrolerze 📱" } };
       }
@@ -1313,8 +1337,16 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const hulajnogaClick = useCallback(() => {
     if (!isControllerClient()) return;
     setState((s) => {
-      if (s.postDrewniakPhase !== "hulajnoga-running" || s.hulajnogaResult) return s;
+      if (s.postDrewniakPhase !== "hulajnoga-running") {
+        hulajnogaDebug("hulajnogaClick rejected: phase", s.postDrewniakPhase);
+        return s;
+      }
+      if (s.hulajnogaResult) {
+        hulajnogaDebug("hulajnogaClick rejected: result exists");
+        return s;
+      }
       const next = s.hulajnogaClicks + 1;
+      hulajnogaDebug("hulajnogaClick accepted", next, "/", HULAJNOGA_REQUIRED_CLICKS);
       if (next >= HULAJNOGA_REQUIRED_CLICKS) {
         return applyHulajnogaResult({ ...s, hulajnogaClicks: next }, true);
       }
@@ -1355,8 +1387,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const acknowledgeHulajnogaResult = useCallback(() => {
     if (!isControllerClient()) return;
     setState((s) => {
-      if (s.postDrewniakPhase !== "hulajnoga-result" || !s.hulajnogaResult) return s;
-      return routeToDzialka(s);
+      if (s.postDrewniakPhase !== "hulajnoga-result" || !s.hulajnogaResult) {
+        hulajnogaDebug("acknowledgeHulajnogaResult rejected", s.postDrewniakPhase);
+        return s;
+      }
+      hulajnogaDebug("acknowledgeHulajnogaResult → DZIAŁKA");
+      return routeToDzialka(s, true);
     });
   }, []);
 

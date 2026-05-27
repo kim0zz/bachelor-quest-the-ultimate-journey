@@ -5,7 +5,9 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
-import { getClientRole, shouldPushGameStateToRoom } from "@/lib/clientRole";
+import { getClientRole, isControllerClient, shouldPushGameStateToRoom } from "@/lib/clientRole";
+import { isHulajnogaInputActive } from "@/lib/hulajnogaDisplay";
+import { hulajnogaDebug } from "@/lib/hulajnogaDebug";
 import { getClientId, getRoomCode } from "@/lib/gameRoom";
 import { getSupabase } from "@/lib/supabase";
 import { createInitialGameState } from "@/state/gameDefaults";
@@ -100,15 +102,56 @@ export function useGameRoomSync(
         );
         return;
       }
+
+      const local = stateRef.current;
+      let nextRemote = remote;
+
+      if (isControllerClient() && isHulajnogaInputActive(local.postDrewniakPhase)) {
+        const remoteActive = isHulajnogaInputActive(remote.postDrewniakPhase);
+        const remoteAcknowledgedDzialka =
+          local.postDrewniakPhase === "hulajnoga-result" &&
+          remote.activeQuestId === "dzialka" &&
+          !remoteActive;
+
+        if (!remoteActive && !remoteAcknowledgedDzialka) {
+          hulajnogaDebug("reject remote during hulajnoga", source, {
+            localPhase: local.postDrewniakPhase,
+            remotePhase: remote.postDrewniakPhase,
+            remoteQuest: remote.activeQuestId,
+            remoteLocation: remote.currentLocationId,
+          });
+          syncLog("reject remote during hulajnoga", getClientRole(), source);
+          return;
+        }
+        if (
+          local.postDrewniakPhase === "hulajnoga-running" &&
+          remote.postDrewniakPhase === "hulajnoga-running"
+        ) {
+          nextRemote = {
+            ...remote,
+            hulajnogaClicks: Math.max(local.hulajnogaClicks, remote.hulajnogaClicks),
+            hulajnogaEndsAt: local.hulajnogaEndsAt ?? remote.hulajnogaEndsAt,
+            hulajnogaStartedAt: local.hulajnogaStartedAt ?? remote.hulajnogaStartedAt,
+          };
+        }
+        if (
+          local.postDrewniakPhase === "hulajnoga-result" &&
+          remote.postDrewniakPhase === "hulajnoga-running"
+        ) {
+          hulajnogaDebug("reject stale remote running after local result", source);
+          return;
+        }
+      }
+
       lastRemoteAppliedAtRef.current = ts;
       applyingRemoteRef.current = true;
-      setState(remote);
-      lastPushedRef.current = JSON.stringify(remote);
+      setState(nextRemote);
+      lastPushedRef.current = JSON.stringify(nextRemote);
       applyingRemoteRef.current = false;
       syncLog("applied remote", source, getClientRole(), {
-        location: remote.currentLocationId,
-        quest: remote.activeQuestId,
-        status: remote.status.kind,
+        location: nextRemote.currentLocationId,
+        quest: nextRemote.activeQuestId,
+        status: nextRemote.status.kind,
       });
     },
     [setState],

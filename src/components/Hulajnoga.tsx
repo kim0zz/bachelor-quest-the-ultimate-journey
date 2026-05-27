@@ -19,19 +19,50 @@ import {
   getHulajnogaProgress,
   getHulajnogaRemainingSeconds,
 } from "@/lib/hulajnogaDisplay";
+import { hulajnogaDebug } from "@/lib/hulajnogaDebug";
 import { useGame, useTick } from "@/state/gameStore";
 
-const HULAJNOGA_OVERLAY_Z = "z-[60]";
+const HULAJNOGA_OVERLAY_Z = "z-[100]";
+const HULAJNOGA_TAP_MS = 80;
 
-function HulajnogaLockShell({ children }: { children: ReactNode }) {
+function stopBubble(e: { stopPropagation: () => void; preventDefault?: () => void }) {
+  e.stopPropagation();
+  e.preventDefault?.();
+}
+
+function HulajnogaLockShell({
+  children,
+  phase,
+  clicks,
+  result,
+}: {
+  children: ReactNode;
+  phase: string | null;
+  clicks: number;
+  result: string | null;
+}) {
+  useEffect(() => {
+    hulajnogaDebug("overlay render", { phase, clicks, result });
+  }, [phase, clicks, result]);
+
   return (
     <div
-      className={`fixed inset-0 ${HULAJNOGA_OVERLAY_Z} flex flex-col overflow-y-auto bg-slate-950 p-4`}
-      style={{ touchAction: "manipulation" }}
-      onPointerDown={(e) => e.stopPropagation()}
-      onClick={(e) => e.stopPropagation()}
+      role="dialog"
+      aria-modal="true"
+      className={`fixed inset-0 ${HULAJNOGA_OVERLAY_Z} flex flex-col overflow-y-auto bg-slate-950 p-4 select-none`}
+      style={{
+        touchAction: "manipulation",
+        WebkitUserSelect: "none",
+        userSelect: "none",
+        WebkitTapHighlightColor: "transparent",
+      }}
+      onPointerDown={stopBubble}
+      onPointerUp={stopBubble}
+      onClick={stopBubble}
+      onTouchStart={stopBubble}
+      onTouchEnd={stopBubble}
     >
-      <div className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center">
+      <div className="pointer-events-auto mx-auto flex w-full max-w-lg flex-1 flex-col justify-center">
         {children}
       </div>
     </div>
@@ -286,7 +317,7 @@ export function PreBitwyTransitionController() {
   );
 }
 
-export function HulajnogaController() {
+export function HulajnogaController({ exclusive = false }: { exclusive?: boolean }) {
   const {
     state,
     closeStatus,
@@ -296,9 +327,15 @@ export function HulajnogaController() {
     acknowledgeHulajnogaResult,
   } = useGame();
   useTick(50);
-  const tapLockRef = useRef(false);
+  const lastAcceptedTapAtRef = useRef(0);
   const dalejLockRef = useRef(false);
   const [dalejReady, setDalejReady] = useState(false);
+
+  const shellProps = {
+    phase: state.postDrewniakPhase,
+    clicks: state.hulajnogaClicks,
+    result: state.hulajnogaResult,
+  };
 
   useEffect(() => {
     if (state.postDrewniakPhase !== "hulajnoga-result") {
@@ -313,29 +350,117 @@ export function HulajnogaController() {
   }, [state.postDrewniakPhase, state.hulajnogaResult]);
 
   const handleHulajnogaPush = (e: MouseEvent | PointerEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (
-      tapLockRef.current ||
-      state.hulajnogaResult ||
-      state.postDrewniakPhase !== "hulajnoga-running"
-    ) {
+    stopBubble(e);
+    if (state.hulajnogaResult) {
+      hulajnogaDebug("tap rejected: result exists");
       return;
     }
-    tapLockRef.current = true;
+    if (state.postDrewniakPhase !== "hulajnoga-running") {
+      hulajnogaDebug("tap rejected: phase", state.postDrewniakPhase);
+      return;
+    }
+    const now = Date.now();
+    const since = now - lastAcceptedTapAtRef.current;
+    if (since < HULAJNOGA_TAP_MS) {
+      hulajnogaDebug("tap rejected: throttle", since, "ms");
+      return;
+    }
+    lastAcceptedTapAtRef.current = now;
     hulajnogaClick();
-    window.setTimeout(() => {
-      tapLockRef.current = false;
-    }, 180);
   };
 
   const handleAcknowledgeResult = (e: MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+    stopBubble(e);
     if (!dalejReady || dalejLockRef.current) return;
     dalejLockRef.current = true;
     acknowledgeHulajnogaResult();
   };
+
+  if (exclusive) {
+    if (state.postDrewniakPhase === "hulajnoga-result") {
+      const success = state.hulajnogaResult === "success";
+      return (
+        <HulajnogaLockShell {...shellProps}>
+          <div className="space-y-6">
+            <div
+              className={`rounded-2xl border-2 p-5 text-center ${
+                success
+                  ? "border-emerald-400 bg-emerald-600/15"
+                  : "border-rose-400 bg-rose-600/15"
+              }`}
+            >
+              <div className="mb-3 text-4xl">{success ? "✅" : "❌"}</div>
+              <p className="text-2xl font-black text-white/90">
+                {success ? "DOJECHAŁ!" : "WYJEBKA!"}
+              </p>
+              <p className="mt-3 text-base text-white/80">{state.status.message}</p>
+              {!success && (
+                <p className="mt-2 text-lg font-bold text-rose-300">🥃 Lama pije</p>
+              )}
+            </div>
+            <button
+              type="button"
+              disabled={!dalejReady}
+              onClick={handleAcknowledgeResult}
+              className="w-full rounded-2xl bg-fuchsia-600 p-6 text-2xl font-black uppercase text-white disabled:opacity-40"
+              style={{ touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}
+            >
+              DALEJ NA DZIAŁKĘ
+            </button>
+          </div>
+        </HulajnogaLockShell>
+      );
+    }
+
+    if (
+      state.postDrewniakPhase === "hulajnoga-running" &&
+      !state.hulajnogaResult
+    ) {
+      const remaining = getHulajnogaRemainingSeconds(state.hulajnogaEndsAt);
+      const progress = getHulajnogaProgress(state.hulajnogaClicks);
+      return (
+        <HulajnogaLockShell {...shellProps}>
+          <div className="flex flex-1 flex-col justify-center gap-4">
+            <div className="text-center">
+              <h3 className="text-2xl font-black uppercase text-rose-300">HULAJNOGA</h3>
+              <p className="mt-1 text-sm text-white/70">
+                Masz 7 sekund. Klikaj ODPYCHAJ SIĘ, żeby dojechać na działkę.
+              </p>
+            </div>
+            <div
+              className={`rounded-2xl border-2 p-4 text-center font-black tabular-nums text-5xl ${
+                remaining <= 2
+                  ? "border-rose-400 bg-rose-500/20 text-rose-200"
+                  : "border-amber-400 bg-amber-500/20 text-amber-200"
+              }`}
+            >
+              {remaining}s
+            </div>
+            <div className="relative h-6 rounded-full bg-black/50 border border-white/20 overflow-hidden">
+              <div
+                className="absolute top-0 h-full bg-gradient-to-r from-amber-500 to-emerald-500 transition-all duration-75"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <p className="text-center text-xl font-black text-white">
+              {state.hulajnogaClicks} / {HULAJNOGA_REQUIRED_CLICKS}
+            </p>
+            <button
+              type="button"
+              onPointerDown={handleHulajnogaPush}
+              disabled={!!state.hulajnogaResult}
+              className="mt-auto w-full rounded-2xl border-4 border-rose-300 bg-gradient-to-b from-rose-500 to-amber-600 p-10 text-4xl font-black uppercase text-white shadow-[0_0_40px_rgba(244,63,94,0.5)] active:scale-95 disabled:opacity-40"
+              style={{ touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}
+            >
+              🛴 ODPYCHAJ SIĘ
+            </button>
+          </div>
+        </HulajnogaLockShell>
+      );
+    }
+
+    return null;
+  }
 
   if (state.preBitwyPhase === "zuker-call") {
     return <PreBitwyTransitionController />;
@@ -360,7 +485,7 @@ export function HulajnogaController() {
 
   if (state.postDrewniakPhase === "hulajnoga-choice") {
     return (
-      <HulajnogaLockShell>
+      <HulajnogaLockShell {...shellProps}>
       <div className="space-y-4">
         <div className="text-center">
           <div className="text-5xl mb-2">🛴</div>
@@ -399,7 +524,7 @@ export function HulajnogaController() {
 
   if (state.postDrewniakPhase === "hulajnoga-skip-narrator") {
     return (
-      <HulajnogaLockShell>
+      <HulajnogaLockShell {...shellProps}>
       <div className="space-y-3">
         <div className="rounded-2xl border-2 border-cyan-400/60 bg-black/50 p-5 text-center">
           <p className="text-base text-white/90">{state.status.message}</p>
@@ -440,14 +565,14 @@ export function HulajnogaController() {
           type="button"
           disabled={!dalejReady}
           onClick={handleAcknowledgeResult}
-          className="w-full select-none rounded-2xl bg-fuchsia-600 p-6 text-2xl font-black uppercase text-white disabled:opacity-40"
+          className="w-full rounded-2xl bg-fuchsia-600 p-6 text-2xl font-black uppercase text-white disabled:opacity-40"
           style={{ touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}
         >
-          Dalej →
+          DALEJ NA DZIAŁKĘ
         </button>
       </div>
     );
-    return <HulajnogaLockShell>{resultUi}</HulajnogaLockShell>;
+    return <HulajnogaLockShell {...shellProps}>{resultUi}</HulajnogaLockShell>;
   }
 
   if (state.postDrewniakPhase !== "hulajnoga-running" || state.hulajnogaResult) {
@@ -458,7 +583,7 @@ export function HulajnogaController() {
   const progress = getHulajnogaProgress(state.hulajnogaClicks);
 
   const runningUi = (
-    <div className="flex flex-1 flex-col justify-center gap-4 select-none">
+    <div className="flex flex-1 flex-col justify-center gap-4">
       <div className="text-center">
         <h3 className="text-2xl font-black uppercase text-rose-300">HULAJNOGA</h3>
         <p className="mt-1 text-sm text-white/70">
@@ -486,14 +611,13 @@ export function HulajnogaController() {
       <button
         type="button"
         onPointerDown={handleHulajnogaPush}
-        onClick={handleHulajnogaPush}
         disabled={!!state.hulajnogaResult}
-        className="mt-auto w-full select-none rounded-2xl border-4 border-rose-300 bg-gradient-to-b from-rose-500 to-amber-600 p-10 text-4xl font-black uppercase text-white shadow-[0_0_40px_rgba(244,63,94,0.5)] active:scale-95 disabled:opacity-40"
+        className="mt-auto w-full rounded-2xl border-4 border-rose-300 bg-gradient-to-b from-rose-500 to-amber-600 p-10 text-4xl font-black uppercase text-white shadow-[0_0_40px_rgba(244,63,94,0.5)] active:scale-95 disabled:opacity-40"
         style={{ touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}
       >
         🛴 ODPYCHAJ SIĘ
       </button>
     </div>
   );
-  return <HulajnogaLockShell>{runningUi}</HulajnogaLockShell>;
+  return <HulajnogaLockShell {...shellProps}>{runningUi}</HulajnogaLockShell>;
 }

@@ -14,6 +14,14 @@ export function isHulajnogaLocked(postDrewniakPhase: PostDrewniakPhase): boolean
   return HULAJNOGA_LOCK_PHASES.includes(postDrewniakPhase);
 }
 
+/** Running or result — controller must show only hulajnoga UI. */
+export function isHulajnogaInputActive(postDrewniakPhase: PostDrewniakPhase): boolean {
+  return (
+    postDrewniakPhase === "hulajnoga-running" ||
+    postDrewniakPhase === "hulajnoga-result"
+  );
+}
+
 export function getHulajnogaRemainingMs(endsAt: number | null): number {
   if (endsAt == null) return 0;
   return Math.max(0, endsAt - Date.now());

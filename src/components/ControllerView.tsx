@@ -9,7 +9,7 @@ import { HulajnogaController } from "./Hulajnoga";
 import { DzialkaController } from "./Dzialka";
 import { ParyzController } from "./Paryz";
 import { isShotPourLocation, VERDICTS } from "@/data/gameData";
-import { isHulajnogaLocked } from "@/lib/hulajnogaDisplay";
+import { isHulajnogaInputActive, isHulajnogaLocked } from "@/lib/hulajnogaDisplay";
 
 export function ControllerView() {
   const {
@@ -100,6 +100,17 @@ export function ControllerView() {
   const verdict =
     [...VERDICTS].reverse().find((v) => state.manPoints >= v.minPoints) ??
     VERDICTS[0];
+
+  if (isHulajnogaInputActive(state.postDrewniakPhase)) {
+    return (
+      <div
+        className="min-h-screen bg-slate-950 text-white"
+        style={{ touchAction: "manipulation", userSelect: "none" }}
+      >
+        <HulajnogaController exclusive />
+      </div>
+    );
+  }
 
   if (state.finalShown) {
     return (
@@ -235,7 +246,10 @@ export function ControllerView() {
               🍺 Za Pekin Bar! →
             </motion.button>
           </div>
-        ) : state.preBitwyPhase || state.postBitwyPhase || state.postDrewniakPhase ? (
+        ) : state.preBitwyPhase ||
+          state.postBitwyPhase ||
+          (state.postDrewniakPhase &&
+            !isHulajnogaInputActive(state.postDrewniakPhase)) ? (
           <HulajnogaController />
         ) : state.foodPhase === "pekin-transition" ? (
           /* ── Pekin → GOFER transition note ── */
