@@ -5,6 +5,7 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
+import { getClientRole, shouldPushGameStateToRoom } from "@/lib/clientRole";
 import { getClientId, getRoomCode } from "@/lib/gameRoom";
 import { getSupabase } from "@/lib/supabase";
 import { createInitialGameState } from "@/state/gameDefaults";
@@ -13,10 +14,21 @@ import type { GameState } from "@/state/gameStore";
 export type RealtimeStatus = "local-only" | "connecting" | "connected";
 
 const HULAJNOGA_CLICKS_WRITE_MS = 180;
+const SYNC_LOG = import.meta.env.DEV;
+
+function syncLog(...args: unknown[]) {
+  if (SYNC_LOG) console.log("[game-sync]", ...args);
+}
 
 function parseRemoteState(raw: unknown): GameState | null {
   if (!raw || typeof raw !== "object") return null;
   return { ...createInitialGameState(), ...(raw as Partial<GameState>) };
+}
+
+function parseUpdatedAtMs(updatedAt: string | null | undefined): number {
+  if (!updatedAt) return Date.now();
+  const ms = Date.parse(updatedAt);
+  return Number.isFinite(ms) ? ms : Date.now();
 }
 
 /** Skip Supabase write when only animated pour fill changed (derived from pourStartedAt on clients). */
@@ -68,12 +80,42 @@ export function useGameRoomSync(
   const hulajnogaTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingStateRef = useRef<GameState | null>(null);
   const lastPushedRef = useRef<string>("");
+  const lastRemoteAppliedAtRef = useRef(0);
 
   const stateRef = useRef(state);
   stateRef.current = state;
 
+  const applyRemoteState = useCallback(
+    (remote: GameState, updatedAt: string | null | undefined, source: string) => {
+      const ts = parseUpdatedAtMs(updatedAt);
+      if (ts < lastRemoteAppliedAtRef.current) {
+        syncLog(
+          "ignore stale remote",
+          source,
+          getClientRole(),
+          "remoteTs",
+          ts,
+          "last",
+          lastRemoteAppliedAtRef.current,
+        );
+        return;
+      }
+      lastRemoteAppliedAtRef.current = ts;
+      applyingRemoteRef.current = true;
+      setState(remote);
+      lastPushedRef.current = JSON.stringify(remote);
+      applyingRemoteRef.current = false;
+      syncLog("applied remote", source, getClientRole(), {
+        location: remote.currentLocationId,
+        quest: remote.activeQuestId,
+        status: remote.status.kind,
+      });
+    },
+    [setState],
+  );
+
   const writeToRoom = useCallback(
-    async (next: GameState, opts?: { force?: boolean }) => {
+    async (next: GameState, opts?: { force?: boolean; label?: string }) => {
       const supabase = getSupabase();
       if (!supabase) return;
       if (
@@ -87,12 +129,13 @@ export function useGameRoomSync(
       const payload = JSON.stringify(next);
       if (payload === lastPushedRef.current) return;
 
+      const updatedAt = new Date().toISOString();
       const { error } = await supabase.from("game_rooms").upsert(
         {
           room_code: roomCode,
           state: next,
           updated_by: clientId,
-          updated_at: new Date().toISOString(),
+          updated_at: updatedAt,
         },
         { onConflict: "room_code" },
       );
@@ -103,13 +146,26 @@ export function useGameRoomSync(
       }
 
       lastPushedRef.current = payload;
+      lastRemoteAppliedAtRef.current = Math.max(
+        lastRemoteAppliedAtRef.current,
+        Date.parse(updatedAt),
+      );
+      syncLog("pushed", opts?.label ?? "state", getClientRole(), {
+        location: next.currentLocationId,
+        quest: next.activeQuestId,
+        status: next.status.kind,
+      });
     },
     [roomCode],
   );
 
   const scheduleWrite = useCallback(
-    (next: GameState, prev: GameState, immediate = false) => {
+    (next: GameState, prev: GameState) => {
       if (!hydratedRef.current || applyingRemoteRef.current) return;
+
+      if (!shouldPushGameStateToRoom()) {
+        return;
+      }
 
       if (hulajnogaTimerRef.current) {
         clearTimeout(hulajnogaTimerRef.current);
@@ -120,31 +176,32 @@ export function useGameRoomSync(
         return;
       }
 
-      const run = () => {
+      const run = (label: string) => {
         pendingStateRef.current = null;
-        void writeToRoom(next);
+        void writeToRoom(next, { label });
       };
 
-      if (immediate || !isHulajnogaClicksOnlyChange(prev, next)) {
-        run();
+      if (!isHulajnogaClicksOnlyChange(prev, next)) {
+        run("critical");
         return;
       }
 
       pendingStateRef.current = next;
-      hulajnogaTimerRef.current = setTimeout(run, HULAJNOGA_CLICKS_WRITE_MS);
+      hulajnogaTimerRef.current = setTimeout(() => run("hulajnoga-clicks"), HULAJNOGA_CLICKS_WRITE_MS);
     },
     [writeToRoom],
   );
 
   const pushStateNow = useCallback(
     async (next: GameState) => {
+      if (!shouldPushGameStateToRoom()) return;
       if (hulajnogaTimerRef.current) {
         clearTimeout(hulajnogaTimerRef.current);
         hulajnogaTimerRef.current = null;
       }
       pendingStateRef.current = null;
       lastPushedRef.current = "";
-      await writeToRoom(next, { force: true });
+      await writeToRoom(next, { force: true, label: "push-now" });
     },
     [writeToRoom],
   );
@@ -154,6 +211,7 @@ export function useGameRoomSync(
     if (!supabase) {
       onStatus("local-only");
       hydratedRef.current = true;
+      syncLog("local-only (no supabase)", getClientRole());
       return;
     }
 
@@ -179,17 +237,15 @@ export function useGameRoomSync(
       if (data?.state) {
         const remote = parseRemoteState(data.state);
         if (remote) {
-          applyingRemoteRef.current = true;
-          setState(remote);
-          lastPushedRef.current = JSON.stringify(remote);
-          applyingRemoteRef.current = false;
+          applyRemoteState(remote, data.updated_at, "hydrate");
         }
-      } else {
-        await writeToRoom(stateRef.current, { force: true });
+      } else if (shouldPushGameStateToRoom()) {
+        await writeToRoom(stateRef.current, { force: true, label: "seed-room" });
       }
 
       hydratedRef.current = true;
       onStatus("connected");
+      syncLog("hydrated", getClientRole(), roomCode);
     }
 
     void hydrate();
@@ -209,17 +265,18 @@ export function useGameRoomSync(
           const row = payload.new as {
             state?: unknown;
             updated_by?: string | null;
+            updated_at?: string | null;
           } | null;
           if (!row?.state) return;
-          if (row.updated_by === getClientId()) return;
+          if (row.updated_by === getClientId()) {
+            syncLog("ignore own write echo", getClientRole());
+            return;
+          }
 
           const remote = parseRemoteState(row.state);
           if (!remote) return;
 
-          applyingRemoteRef.current = true;
-          setState(remote);
-          lastPushedRef.current = JSON.stringify(remote);
-          applyingRemoteRef.current = false;
+          applyRemoteState(remote, row.updated_at, "realtime");
         },
       )
       .subscribe((status) => {
@@ -233,8 +290,7 @@ export function useGameRoomSync(
       cancelled = true;
       void supabase.removeChannel(channel);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- init once per room
-  }, [roomCode, setState, onStatus]);
+  }, [roomCode, setState, onStatus, applyRemoteState, writeToRoom]);
 
   const prevStateRef = useRef(state);
   useEffect(() => {
@@ -247,8 +303,8 @@ export function useGameRoomSync(
   useEffect(() => {
     return () => {
       if (hulajnogaTimerRef.current) clearTimeout(hulajnogaTimerRef.current);
-      if (pendingStateRef.current) {
-        void writeToRoom(pendingStateRef.current);
+      if (pendingStateRef.current && shouldPushGameStateToRoom()) {
+        void writeToRoom(pendingStateRef.current, { label: "flush-unmount" });
       }
     };
   }, [writeToRoom]);

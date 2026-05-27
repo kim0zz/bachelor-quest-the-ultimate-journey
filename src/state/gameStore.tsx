@@ -34,7 +34,8 @@ import {
   type Location,
   type PourResult,
 } from "@/data/gameData";
-import { isControllerClient } from "@/lib/clientRole";
+import { isControllerClient, isTvClient } from "@/lib/clientRole";
+import { getSupabase } from "@/lib/supabase";
 import { computeHulajnogaEndsAt } from "@/lib/hulajnogaDisplay";
 import { computePourDisplayLevel } from "@/lib/pourLevel";
 import { createInitialGameState } from "@/state/gameDefaults";
@@ -355,6 +356,10 @@ function resolvePostBar(s: GameState): Pick<GameState, "earlyGamePhase" | "statu
 
 function load(): GameState {
   if (typeof window === "undefined") return createInitialGameState();
+  // TV + Supabase: do not boot from stale localStorage; wait for room hydrate/realtime.
+  if (isTvClient() && getSupabase()) {
+    return createInitialGameState();
+  }
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return createInitialGameState();
@@ -436,16 +441,22 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const writingRef = useRef(false);
 
   useEffect(() => {
+    if (realtimeStatus === "connected" || realtimeStatus === "connecting") {
+      return;
+    }
     writingRef.current = true;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     writingRef.current = false;
-  }, [state]);
+  }, [state, realtimeStatus]);
 
   useEffect(() => {
+    if (getSupabase()) {
+      return;
+    }
     function onStorage(e: StorageEvent) {
-      if (e.key !== STORAGE_KEY || !e.newValue) return;
+      if (e.key !== STORAGE_KEY || !e.newValue || writingRef.current) return;
       try {
-        setState(JSON.parse(e.newValue));
+        setState({ ...createInitialGameState(), ...JSON.parse(e.newValue) });
       } catch {
         /* noop */
       }

@@ -17,3 +17,9 @@ export function isControllerClient(): boolean {
 export function isTvClient(): boolean {
   return getClientRole() === "tv";
 }
+
+/** Only controller/admin may push local state to Supabase. TV subscribes only. */
+export function shouldPushGameStateToRoom(): boolean {
+  const role = getClientRole();
+  return role === "controller" || role === "admin";
+}
