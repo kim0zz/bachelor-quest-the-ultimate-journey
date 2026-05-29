@@ -79,7 +79,7 @@ function BitwyIntroTv() {
       <div className="text-6xl mb-4">🏚️</div>
       <h2 className="text-5xl font-black uppercase tracking-wide text-fuchsia-300">BITWY</h2>
       <p className="mx-auto mt-6 max-w-3xl text-2xl leading-relaxed text-white/80">
-        Bitwy. Miejsce, gdzie kiedyś mieszkał Żuker i jakaś random typiara, ale tak naprawdę mieszkał tam alkohol, chaos i decyzje bez właściciela.
+        Bitwy. Miejsce, gdzie kiedyś mieszkał Żuker, Bewicz i jakaś random typiara, ale tak naprawdę mieszkał tam alkohol, chaos i decyzje bez właściciela.
       </p>
       <div className="mx-auto mt-8 max-w-3xl rounded-2xl border border-amber-400/40 bg-amber-950/30 p-6">
         <p className="text-xl font-bold text-amber-200">
