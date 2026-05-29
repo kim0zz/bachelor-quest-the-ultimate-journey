@@ -126,27 +126,58 @@ export function ShotPourMinigameController({ loc }: { loc: Location }) {
     fillSpeed,
   );
   const pourStoppingRef = useRef(false);
+  const pourButtonRef = useRef<HTMLButtonElement>(null);
+  const activePointerIdRef = useRef<number | null>(null);
 
   useTick(50);
+
+  const releasePointerCapture = () => {
+    const btn = pourButtonRef.current;
+    const pointerId = activePointerIdRef.current;
+    if (btn == null || pointerId == null) return;
+    try {
+      if (btn.hasPointerCapture(pointerId)) {
+        btn.releasePointerCapture(pointerId);
+      }
+    } catch {
+      /* ignore — capture may already be released */
+    }
+    activePointerIdRef.current = null;
+  };
+
+  const finishPourPointer = () => {
+    releasePointerCapture();
+    if (pourStoppingRef.current || !state.pourIsPouring || state.pourEvaluated) return;
+    pourStoppingRef.current = true;
+    stopPouring();
+  };
+
+  useEffect(() => {
+    return () => {
+      releasePointerCapture();
+      pourStoppingRef.current = false;
+    };
+  }, []);
 
   const bindPour = () => ({
     onPointerDown: (e: PointerEvent<HTMLButtonElement>) => {
       e.preventDefault();
-      (e.target as HTMLElement).setPointerCapture(e.pointerId);
       pourStoppingRef.current = false;
+      activePointerIdRef.current = e.pointerId;
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch {
+        activePointerIdRef.current = null;
+      }
       startPouring();
     },
     onPointerUp: (e: PointerEvent<HTMLButtonElement>) => {
       e.preventDefault();
-      if (pourStoppingRef.current) return;
-      pourStoppingRef.current = true;
-      stopPouring();
+      finishPourPointer();
     },
     onPointerCancel: (e: PointerEvent<HTMLButtonElement>) => {
       e.preventDefault();
-      if (pourStoppingRef.current) return;
-      pourStoppingRef.current = true;
-      stopPouring();
+      finishPourPointer();
     },
   });
 
@@ -175,6 +206,7 @@ export function ShotPourMinigameController({ loc }: { loc: Location }) {
 
       {!frozen ? (
         <button
+          ref={pourButtonRef}
           type="button"
           {...bindPour()}
           style={{ touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}

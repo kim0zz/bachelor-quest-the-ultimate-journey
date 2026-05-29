@@ -1,3 +1,9 @@
+const MAX_POUR_ELAPSED_SEC = 15;
+
+function clampLevel(level: number): number {
+  return Math.max(0, Math.min(100, level));
+}
+
 /** Derive fill % for display without syncing every animation frame. */
 export function computePourDisplayLevel(
   pourStartedAt: number | null,
@@ -6,10 +12,14 @@ export function computePourDisplayLevel(
   storedLevel: number,
   fillSpeed: number,
 ): number {
-  if (pourEvaluated) return storedLevel;
-  if (pourIsPouring && pourStartedAt != null) {
+  if (pourEvaluated) return clampLevel(storedLevel);
+
+  if (pourIsPouring) {
+    if (pourStartedAt == null) return 0;
     const elapsedSec = (Date.now() - pourStartedAt) / 1000;
-    return Math.min(100, elapsedSec * fillSpeed);
+    if (elapsedSec > MAX_POUR_ELAPSED_SEC) return 0;
+    return clampLevel(elapsedSec * fillSpeed);
   }
-  return storedLevel;
+
+  return 0;
 }

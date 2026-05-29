@@ -1324,6 +1324,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const now = Date.now();
       return {
         ...s,
+        ...emptyPourState(),
         postDrewniakPhase: "hulajnoga-running",
         hulajnogaStartedAt: now,
         hulajnogaEndsAt: computeHulajnogaEndsAt(now),
