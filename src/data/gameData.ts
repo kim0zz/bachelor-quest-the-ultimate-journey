@@ -136,13 +136,15 @@ export const VERDICTS: Verdict[] = [
 
 export const BAR_IDS = ["hans", "male-piwko"] as const;
 
+export const KONOPA_INTRO_TEXT =
+  "Lama budzi się na KONOPA. Człowiek odpowiedzialny napiłby się wody i przemyślał życie. Lama ma na dziś inne plany.";
+
 export const LOCATIONS: Location[] = [
   {
     id: "konopa",
     name: "KONOPA",
     shortName: "Start",
-    description:
-      "Lama budzi się na KONOPA. Człowiek odpowiedzialny napiłby się wody i przemyślał życie. Lama ma na dziś inne plany.",
+    description: KONOPA_INTRO_TEXT,
     x: 6,
     y: 60,
     type: "start",
@@ -296,22 +298,22 @@ export const LOCATIONS: Location[] = [
     bartenderDialogue: {
       bartenderName: "Ada",
       introLine:
-        "O, Lama! Dobrze cię widzieć. Jak się trzymasz? Wyglądasz, jakby dzień już zdążył trochę przyspieszyć.",
+        "Gościu, Ty znowu tutaj? Lama, ja już nie wiem, czy ty przychodzisz po gofra, czy ja prowadzę punkt ratunkowy dla twojego organizmu.",
       options: [
         {
-          label: "Ada, ratuj. Muszę coś zjeść.",
+          label: "Adka, ratuj. Muszę coś zjeść.",
           outcomeLine:
-            "Jasne, spokojnie. Zaraz coś ogarniemy. Najpierw oddychaj, potem będziemy podejmować decyzje.",
+            "Dobra, spokojnie. Zaraz cię składamy. Najpierw cukier, potem decyzje życiowe.",
         },
         {
-          label: "Jest dobrze, kontroluję sytuację.",
+          label: "Ja tylko na klasyka.",
           outcomeLine:
-            "To dobrze. Ale i tak dam ci coś słodkiego, bo czasem nawet bohaterowie potrzebują gofra.",
+            "No wiadomo. Jakbyś kiedyś zamówił coś normalnie, to bym sprawdziła, czy to na pewno ty.",
         },
         {
-          label: "Pytasz ogólnie czy o dziewczyny?",
+          label: "Pytasz o gofra czy o moje życie?",
           outcomeLine:
-            "O wszystko. Ale zacznijmy od gofra, bo na rozmowy o dziewczynach trzeba mieć energię.",
+            "O jedno i drugie, ale zacznijmy od gofra, bo twoje życie wygląda teraz na trudniejsze w obsłudze.",
         },
       ],
     },
@@ -328,7 +330,7 @@ export const LOCATIONS: Location[] = [
     locked: true,
     icon: "🏚️",
     pointsForSuccess: 10,
-    rewardText: "Pokój Bewicza uznał nalanie. Lama jeszcze funkcjonuje. +10 Mąż Points.",
+    rewardText: "Pokój Żuka uznał nalanie. Lama jeszcze funkcjonuje. +10 Mąż Points.",
     penaltyText: "BITWY nie wybacza braku kontroli. Lama pije.",
     targetMin: 80,
     targetMax: 95,
@@ -346,7 +348,7 @@ export const LOCATIONS: Location[] = [
     name: "DREWNIAK",
     shortName: "DREWNIAK",
     description:
-      "Misja zaopatrzeniowa przed działką. W DREWNIAKU Lama spotyka Johny'ego, który wygląda jak człowiek po trzech decyzjach i przed czwartą. Johny: „Lama, nie kombinuj. Czteropak Harnolda i flacha. Jak bierzesz włoszczyznę, to ja wysiadam z tej fabuły.”",
+      "Misja zaopatrzeniowa przed działką. W DREWNIAKU Lama spotyka Dżoniego, który wygląda jak człowiek po trzech decyzjach i przed czwartą. Dżoni: „Lama, nie kombinuj. Czteropak Harnolda i flacha. Jak bierzesz włoszczyznę, to ja wysiadam z tej fabuły.”",
     x: 58,
     y: 38,
     type: "quiz",
@@ -354,9 +356,9 @@ export const LOCATIONS: Location[] = [
     icon: "🛒",
     pointsForSuccess: 10,
     rewardText:
-      "Johny kiwa głową. To nie była dobra decyzja życiowo, ale była poprawna logistycznie. Czteropak to dywersyfikacja, flacha to plan awaryjny. +10 Mąż Points.",
+      "Dżoni kiwa głową. To nie była dobra decyzja życiowo, ale była poprawna logistycznie. Czteropak to dywersyfikacja, flacha to plan awaryjny. +10 Mąż Points.",
     penaltyText:
-      "Johny patrzy na zakupy i milknie. To najgorszy rodzaj ciszy — cisza człowieka, który stracił wiarę w melanż. Lama pije za brak misji.",
+      "Dżoni patrzy na zakupy i milknie. To najgorszy rodzaj ciszy — cisza człowieka, który stracił wiarę w melanż. Lama pije za brak misji.",
     question: "Co Lama kupuje w DREWNIAKU przed działką?",
     answers: [
       "Czteropak Harnolda i flachę",
@@ -476,17 +478,17 @@ export const BALANCE_TARGET_MAX = 58;
 export const BALANCE_POINTS = 10;
 
 export const POST_BITWY_TRANSITION_TEXT =
-  "BITWY powoli przechodzą z melanżu w oddział intensywnej drzemki. Ludzie leżą w pozycjach, których nie przewiduje anatomia. Lama patrzy na to wszystko i dochodzi do wniosku, że jest jeszcze niedopity. Melanż podobno kręci się dalej na działce, ale najpierw trzeba zrobić najważniejszą misję dorosłego człowieka: kupić alkohol w DREWNIAKU.";
+  "Lama opuszcza BITWY, zanim melina uzna go za element wyposażenia. Ktoś już leży, ktoś już nie odpowiada, a ktoś jeszcze szuka kabla do głośnika. Czas spierdalać.";
 
 export const HULAJNOGA_DURATION_MS = 7000;
 export const HULAJNOGA_REQUIRED_CLICKS = 25;
 export const HULAJNOGA_POINTS = 15;
 
 export const DZIALKA_INTRO_PART1 =
-  "Lama dociera na działkę. Swoje naturalne środowisko. Z daleka już słychać, że muzyka napierdala, ktoś drze pizdę, ktoś pluska się w basenie, a gdzieś w oddali działkowcy zaczynają przeczuwać, że regulamin ROD właśnie traci kontrolę nad sytuacją.";
+  "Lama dociera na działkę. Jego naturalne środowisko: ROD, basen, grill i muzyka tak głośna, że regulamin sam zaczyna szukać administratora.";
 
 export const DZIALKA_INTRO_PART2 =
-  "To nie jest zwykła działka. To jest miejsce, gdzie grill, basen i Bluetooth speaker potrafią stworzyć problemy większe niż zebranie zarządu.";
+  "Z oddali słychać darcie pizdy, plusk w basenie i ten specyficzny chaos, który mówi jedno: melanż jeszcze żyje.";
 
 export const DZIALKA_RANDOM_LINE =
   "Przelizalem kilku kolegów i nie żałuję tego";

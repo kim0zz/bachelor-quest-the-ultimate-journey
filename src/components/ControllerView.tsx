@@ -12,6 +12,8 @@ import { isShotPourLocation, VERDICTS } from "@/data/gameData";
 import { isHulajnogaInputActive, isHulajnogaLocked } from "@/lib/hulajnogaDisplay";
 import { shouldShowPourUi } from "@/lib/pourGuard";
 import { MapPreviewToggle } from "@/components/MapPreviewToggle";
+import { KonopaIntroController } from "@/components/KonopaIntro";
+import { BartenderBonusPoints, ManPointsDeltaLine } from "@/components/ManPointsFeedback";
 
 export function ControllerView() {
   const {
@@ -102,6 +104,23 @@ export function ControllerView() {
   const verdict =
     [...VERDICTS].reverse().find((v) => state.manPoints >= v.minPoints) ??
     VERDICTS[0];
+
+  if (state.earlyGamePhase === "konopa-intro") {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-950 via-purple-950 to-slate-950 p-5 text-white">
+        <header className="flex items-center justify-between gap-2">
+          <GroomAvatar size={56} />
+          <div className="text-right">
+            <div className="text-xs uppercase tracking-widest text-fuchsia-300">Kontroler</div>
+            <div className="text-lg font-bold">Lama 🦙</div>
+          </div>
+        </header>
+        <div className="mt-8">
+          <KonopaIntroController />
+        </div>
+      </div>
+    );
+  }
 
   if (isHulajnogaLocked(state.postDrewniakPhase)) {
     return (
@@ -299,6 +318,10 @@ export function ControllerView() {
               <p className="mt-3 text-base text-white/80">
                 {state.status.message}
               </p>
+              <ManPointsDeltaLine
+                delta={state.status.pointsDelta}
+                className="mt-3 text-2xl font-black text-cyan-300"
+              />
               {(state.status.kind === "groomDrinks" ||
                 state.status.kind === "wrong") && (
                 <p className="mt-2 text-lg font-bold text-rose-300">
@@ -409,6 +432,11 @@ export function ControllerView() {
                       <p className="mt-3 text-base italic text-white/90">
                         {bartender.bartenderName}: „{bartender.options[state.bartenderChoiceIndex]?.outcomeLine}"
                       </p>
+                      <BartenderBonusPoints
+                        bonusPoints={
+                          bartender.options[state.bartenderChoiceIndex]?.bonusPoints
+                        }
+                      />
                     </>
                   )}
                 </div>

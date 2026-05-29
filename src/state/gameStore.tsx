@@ -48,6 +48,7 @@ import {
 } from "@/lib/hulajnogaParty";
 import { stripStalePourState } from "@/lib/pourGuard";
 import { computePourDisplayLevel } from "@/lib/pourLevel";
+import { correctStatus } from "@/lib/manPointsFeedback";
 import { createInitialGameState } from "@/state/gameDefaults";
 import {
   useGameRoomSync,
@@ -102,7 +103,7 @@ function evaluatePourState(s: GameState, level: number, loc: Location) {
 }
 
 export type SecretUnderBarPhase = "offer" | "entry" | "reveal";
-export type EarlyGamePhase = "choosing-bar" | "post-bar-choice" | null;
+export type EarlyGamePhase = "konopa-intro" | "choosing-bar" | "post-bar-choice" | null;
 export type BartenderPhase = "intro" | "outcome" | null;
 export type FoodPhase = "choosing" | "pekin-event" | "pekin-aftermath" | "pekin-transition" | null;
 
@@ -163,6 +164,8 @@ export type RiskPhase = "intro" | "countdown" | "question" | null;
 export interface GameStatus {
   kind: StatusKind;
   message: string;
+  /** Points gained with this feedback (shown when not already in message). */
+  pointsDelta?: number;
 }
 
 export interface GameState {
@@ -433,6 +436,7 @@ interface Ctx {
   chooseBartenderOption: (index: number) => void;
   continuePastBartender: () => void;
   choosePostBar: (goToOtherBar: boolean) => void;
+  acknowledgeKonopaIntro: () => void;
   chooseFoodOption: (option: "pekin" | "gofer") => void;
   acknowledgePekinBar: () => void;
   chooseBitwyPath: (kitchen: boolean) => void;
@@ -502,6 +506,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
     : null;
 
   const availableLocations = useMemo(() => {
+    if (state.earlyGamePhase === "konopa-intro") {
+      return [];
+    }
     // Bar section: show uncompleted bars
     if (state.earlyGamePhase === "choosing-bar") {
       return locations.filter(
@@ -565,6 +572,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
           hulajnogaDebug("goToLocation blocked during hulajnoga", id);
           return s;
         }
+        if (s.earlyGamePhase === "konopa-intro") return s;
         // During food choice, intercept food destinations
         if (s.foodPhase === "choosing") {
           if (id === "pekin-bar") {
@@ -661,10 +669,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
           bartenderPhase: null,
           bartenderChoiceIndex: null,
           status: success
-            ? {
-                kind: "correct",
-                message: opts?.statusMessage ?? loc.rewardText,
-              }
+            ? correctStatus(opts?.statusMessage ?? loc.rewardText, pts)
             : {
                 kind: "groomDrinks",
                 message: opts?.statusMessage ?? loc.penaltyText,
@@ -932,6 +937,21 @@ export function GameProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  // ── KONOPA intro ──
+  const acknowledgeKonopaIntro = useCallback(() => {
+    setState((s) => {
+      if (s.earlyGamePhase !== "konopa-intro") return s;
+      return {
+        ...s,
+        earlyGamePhase: "choosing-bar",
+        status: {
+          kind: "idle" as const,
+          message: "Pierwszy etap przygotowań do ślubu: wybrać, gdzie się nakurwić.",
+        },
+      };
+    });
+  }, []);
+
   // ── Post-bar choice ──
   const choosePostBar = useCallback((goToOtherBar: boolean) => {
     setState((s) => {
@@ -1143,7 +1163,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
           shotCount: success ? s.shotCount : s.shotCount + penalty,
           ...emptyPourState(),
           status: success
-            ? { kind: "correct" as const, message: statusMessage }
+            ? correctStatus(statusMessage, pts)
             : { kind: "groomDrinks" as const, message: statusMessage },
         };
       }
@@ -1156,7 +1176,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         activeQuestId: null,
         ...emptyPourState(),
         status: success
-          ? { kind: "correct", message: statusMessage }
+          ? correctStatus(statusMessage, pts)
           : { kind: "groomDrinks", message: statusMessage },
       };
     });
@@ -1253,7 +1273,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
           return {
             ...s,
             bitwyPhase: "salon-narrator" as BitwyPhase,
-            status: { kind: "idle" as const, message: "Czas na Pokój Bewicza." },
+            status: { kind: "idle" as const, message: "Czas na Pokój Żuka." },
           };
         case "salon-narrator":
           return {
@@ -1306,7 +1326,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         manPoints: s.manPoints + (success ? BALANCE_POINTS : 0),
         shotCount: success ? s.shotCount : s.shotCount + 1,
         status: success
-          ? { kind: "correct" as const, message: "Pion złapany. Chwilowo. Fizyka jest zaskoczona." }
+          ? correctStatus("Pion złapany. Chwilowo. Fizyka jest zaskoczona.", BALANCE_POINTS)
           : { kind: "groomDrinks" as const, message: "Pion uciekł. Godność też. Lama pije." },
       };
     });
@@ -1686,6 +1706,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     chooseBartenderOption,
     continuePastBartender,
     choosePostBar,
+    acknowledgeKonopaIntro,
     chooseFoodOption,
     acknowledgePekinBar,
     chooseBitwyPath,

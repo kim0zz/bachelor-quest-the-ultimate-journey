@@ -14,8 +14,10 @@ import { ParyzTv } from "@/components/Paryz";
 import { RealtimeIndicator } from "@/components/RealtimeIndicator";
 import { MapPreviewToggle } from "@/components/MapPreviewToggle";
 import { TvChoiceMirroring } from "@/components/TvChoiceMirroring";
+import { KonopaIntroTv } from "@/components/KonopaIntro";
 import { ReadOnlyChoiceCards } from "@/components/ReadOnlyChoiceCards";
 import { getPostBarChoices } from "@/lib/tvChoiceMirror";
+import { useMapRevealDelay } from "@/lib/mapRevealDelay";
 
 export const Route = createFileRoute("/tv")({
   head: () => ({
@@ -128,6 +130,10 @@ function PekinBarOverlay() {
 
 function TvInner() {
   const { state, realtimeStatus, roomCode } = useGame();
+  const mapRevealing = useMapRevealDelay(state);
+  const hideQuestOverlays =
+    mapRevealing || state.earlyGamePhase === "konopa-intro";
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-slate-950 p-6 text-white">
       <RealtimeIndicator status={realtimeStatus} roomCode={roomCode} />
@@ -155,19 +161,24 @@ function TvInner() {
         {state.status.message}
       </footer>
 
-      <QuestModal />
-      <StatusBurst />
-      <SecretUnderBarTv />
-      <BitwyTv />
-      <PreBitwyTransitionTv />
-      <PostBitwyTransitionTv />
-      <HulajnogaTv />
-      <DzialkaTv />
-      <ParyzTv />
-      <PostBarOverlay />
-      <PekinBarOverlay />
-      <PekinTransitionOverlay />
-      <TvChoiceMirroring />
+      {!hideQuestOverlays && (
+        <>
+          <QuestModal />
+          <StatusBurst />
+          <SecretUnderBarTv />
+          <BitwyTv />
+          <PreBitwyTransitionTv />
+          <PostBitwyTransitionTv />
+          <HulajnogaTv />
+          <DzialkaTv />
+          <ParyzTv />
+          <PostBarOverlay />
+          <PekinBarOverlay />
+          <PekinTransitionOverlay />
+          <TvChoiceMirroring />
+        </>
+      )}
+      <KonopaIntroTv />
       {state.finalShown && <FinalVerdict />}
     </div>
   );

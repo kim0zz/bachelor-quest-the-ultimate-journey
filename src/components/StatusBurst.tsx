@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect } from "react";
 import confetti from "canvas-confetti";
 import { isHulajnogaLocked } from "@/lib/hulajnogaDisplay";
+import { ManPointsDeltaLine } from "@/components/ManPointsFeedback";
 import { useGame } from "@/state/gameStore";
 
 export function StatusBurst() {
@@ -55,9 +56,13 @@ export function StatusBurst() {
             transition={{ type: "spring", stiffness: 200, damping: 12 }}
             className={`rounded-3xl bg-gradient-to-br ${bg} px-16 py-12 text-center shadow-[0_0_120px_rgba(217,70,239,0.7)]`}
           >
-            <div className="text-7xl md:text-8xl font-black uppercase tracking-tight text-white drop-shadow-[0_4px_30px_rgba(0,0,0,0.6)]">
+            <div className="text-5xl md:text-6xl font-black uppercase tracking-tight text-white drop-shadow-[0_4px_30px_rgba(0,0,0,0.6)]">
               {state.status.message}
             </div>
+            <ManPointsDeltaLine
+              delta={state.status.pointsDelta}
+              className="mt-6 text-4xl md:text-5xl font-black uppercase tracking-wide text-cyan-200 drop-shadow-[0_0_30px_rgba(34,211,238,0.7)]"
+            />
           </motion.div>
           <button
             onClick={closeStatus}

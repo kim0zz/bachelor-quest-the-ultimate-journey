@@ -1,4 +1,4 @@
-import { type PourResult } from "@/data/gameData";
+import { type PourResult, KONOPA_INTRO_TEXT } from "@/data/gameData";
 
 function emptyPourState() {
   return {
@@ -21,8 +21,7 @@ export function createInitialGameState() {
     failedIds: [] as string[],
     status: {
       kind: "idle" as const,
-      message:
-        "Lama budzi się na KONOPA. Człowiek odpowiedzialny napiłby się wody i przemyślał życie. Lama ma na dziś inne plany.",
+      message: KONOPA_INTRO_TEXT,
     },
     finalShown: false,
     riskPhase: null,
@@ -33,7 +32,7 @@ export function createInitialGameState() {
     secretUnderBarShotsConfirmed: 0,
     secretShotPulse: 0,
     // Early game (bar choice) flow
-    earlyGamePhase: "choosing-bar" as "choosing-bar" | "post-bar-choice" | null,
+    earlyGamePhase: "konopa-intro" as "konopa-intro" | "choosing-bar" | "post-bar-choice" | null,
     bartenderPhase: null as "intro" | "outcome" | null,
     bartenderChoiceIndex: null as number | null,
     // Food stage (after bars)

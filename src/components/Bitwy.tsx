@@ -14,6 +14,7 @@ import { ShotPourMinigameTv, ShotPourMinigameController } from "@/components/Sho
 import { useGame, useTick } from "@/state/gameStore";
 import { ReadOnlyChoiceCards } from "@/components/ReadOnlyChoiceCards";
 import { getBitwyIntroChoices } from "@/lib/tvChoiceMirror";
+import { ManPointsDeltaLine } from "@/components/ManPointsFeedback";
 
 function getBalancePos(startTime: number): number {
   const elapsed = Date.now() - startTime;
@@ -78,7 +79,7 @@ function BitwyIntroTv() {
       <div className="text-6xl mb-4">🏚️</div>
       <h2 className="text-5xl font-black uppercase tracking-wide text-fuchsia-300">BITWY</h2>
       <p className="mx-auto mt-6 max-w-3xl text-2xl leading-relaxed text-white/80">
-        Bitwy. Miejsce, gdzie kiedyś mieszkał Żuker, Bewicz i jakaś random typiara, ale tak naprawdę mieszkał tam alkohol, chaos i decyzje bez właściciela.
+        Bitwy. Miejsce, gdzie kiedyś mieszkał Żuker i jakaś random typiara, ale tak naprawdę mieszkał tam alkohol, chaos i decyzje bez właściciela.
       </p>
       <div className="mx-auto mt-8 max-w-3xl rounded-2xl border border-amber-400/40 bg-amber-950/30 p-6">
         <p className="text-xl font-bold text-amber-200">
@@ -86,7 +87,7 @@ function BitwyIntroTv() {
         </p>
         <p className="mt-2 text-sm uppercase tracking-widest text-amber-300/80">Skiba:</p>
         <p className="mt-2 text-2xl font-bold text-white/90">
-          &quot;Lama, kurwa, chodź do kuchni na chwilę. Pokój Bewicza nie ucieknie.&quot;
+          &quot;Lama, kurwa, chodź do kuchni na chwilę. Pokój Żuka nie ucieknie.&quot;
         </p>
       </div>
       <div className="mx-auto mt-8 max-w-4xl">
@@ -174,7 +175,7 @@ function BitwySalonNarratorTv() {
             : `${GROOM.nickname} próbuje zachować klasę i ominąć kuchnię. Skiba zapamięta ten brak lojalności.`}
       </p>
       <p className="mx-auto mt-6 max-w-3xl text-2xl text-white/70">
-        W Pokoju Bewicza {GROOM.nickname} siada i nalewa sobie shota. Na BITWY nie pytają, czy pijesz. Pytają, czy potrafisz nalać.
+        W Pokoju Żuka {GROOM.nickname} siada i nalewa sobie shota. Na BITWY nie pytają, czy pijesz. Pytają, czy potrafisz nalać.
       </p>
       <p className="mt-8 text-lg text-white/50">Kontynuuj na kontrolerze 📱</p>
     </TvCard>
@@ -375,6 +376,10 @@ function BitwyFeedback() {
           {isCorrect ? "DOBRZE!" : "ŹLE!"}
         </p>
         <p className="mt-3 text-base text-white/80">{state.status.message}</p>
+        <ManPointsDeltaLine
+          delta={state.status.pointsDelta}
+          className="mt-3 text-2xl font-black text-cyan-300"
+        />
         {state.status.kind === "groomDrinks" && (
           <p className="mt-2 text-lg font-bold text-amber-300">🥃 {GROOM.nickname} pije</p>
         )}
@@ -416,7 +421,7 @@ function BitwyIntroCtrl({ chooseBitwyPath }: { chooseBitwyPath: (k: boolean) => 
       >
         <span className="text-4xl">🛋️</span>
         <div>
-          <div className="text-xl font-black">Idę do Pokoju Bewicza</div>
+          <div className="text-xl font-black">Idę do Pokoju Żuka</div>
           <div className="text-sm text-white/60">Przywitać się z ludźmi</div>
         </div>
       </motion.button>
@@ -542,7 +547,7 @@ function BitwyConfessionCtrl({ advance }: { advance: () => void }) {
         onClick={advance}
         className="w-full rounded-2xl bg-fuchsia-600 p-6 text-2xl font-black uppercase"
       >
-        🛋️ Idę do Pokoju Bewicza
+        🛋️ Idę do Pokoju Żuka
       </motion.button>
     </div>
   );
@@ -570,7 +575,7 @@ function BitwySalonNarratorCtrl({
       </div>
       <div className="rounded-2xl border border-white/20 bg-white/5 p-4 text-center">
         <p className="text-sm text-white/70">
-          W Pokoju Bewicza {GROOM.nickname} siada i nalewa sobie shota. Na BITWY nie pytają, czy pijesz. Pytają, czy potrafisz nalać.
+          W Pokoju Żuka {GROOM.nickname} siada i nalewa sobie shota. Na BITWY nie pytają, czy pijesz. Pytają, czy potrafisz nalać.
         </p>
       </div>
       <motion.button

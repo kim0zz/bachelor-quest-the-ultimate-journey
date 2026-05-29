@@ -4,6 +4,7 @@ import { shouldShowPourUi } from "@/lib/pourGuard";
 import { ShotPourMinigameTv } from "@/components/ShotPourMinigame";
 import { ReadOnlyChoiceCards } from "@/components/ReadOnlyChoiceCards";
 import { getBartenderDialogueChoices } from "@/lib/tvChoiceMirror";
+import { BartenderBonusPoints } from "@/components/ManPointsFeedback";
 import { useGame, useTick } from "@/state/gameStore";
 
 export function QuestModal() {
@@ -108,6 +109,13 @@ export function QuestModal() {
                       {bartender.bartenderName}: „{bartender.options[state.bartenderChoiceIndex]?.outcomeLine}"
                     </p>
                   )}
+                  <BartenderBonusPoints
+                    bonusPoints={
+                      state.bartenderChoiceIndex != null
+                        ? bartender.options[state.bartenderChoiceIndex]?.bonusPoints
+                        : undefined
+                    }
+                  />
                   <p className="mt-6 text-lg text-white/50">
                     Kontynuuj na kontrolerze 📱
                   </p>

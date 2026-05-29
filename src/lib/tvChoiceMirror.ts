@@ -59,7 +59,7 @@ export function getBitwyIntroChoices(): ReadOnlyChoice[] {
     },
     {
       icon: "🛋️",
-      title: "Idę do Pokoju Bewicza",
+      title: "Idę do Pokoju Żuka",
       description: "Przywitać się z ludźmi",
     },
   ];
@@ -99,6 +99,10 @@ export function getStandaloneTvChoiceMirror(
   availableLocations: Location[],
 ): TvChoiceMirrorConfig | null {
   if (state.finalShown || isHulajnogaLocked(state.postDrewniakPhase)) {
+    return null;
+  }
+
+  if (state.earlyGamePhase === "konopa-intro") {
     return null;
   }
 
