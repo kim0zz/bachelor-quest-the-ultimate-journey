@@ -2,6 +2,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { isShotPourLocation } from "@/data/gameData";
 import { shouldShowPourUi } from "@/lib/pourGuard";
 import { ShotPourMinigameTv } from "@/components/ShotPourMinigame";
+import { ReadOnlyChoiceCards } from "@/components/ReadOnlyChoiceCards";
+import { getBartenderDialogueChoices } from "@/lib/tvChoiceMirror";
 import { useGame, useTick } from "@/state/gameStore";
 
 export function QuestModal() {
@@ -83,9 +85,12 @@ export function QuestModal() {
                   <p className="mx-auto max-w-3xl text-2xl italic text-white/90 leading-relaxed">
                     „{bartender.introLine}"
                   </p>
-                  <p className="mt-8 text-lg text-white/50">
-                    Odpowiedz na kontrolerze 📱
-                  </p>
+                  <div className="mx-auto mt-8 max-w-4xl">
+                    <ReadOnlyChoiceCards
+                      title={`Odpowiedź dla ${bartender.bartenderName}`}
+                      choices={getBartenderDialogueChoices(bartender)}
+                    />
+                  </div>
                 </div>
               )}
               {inBartender && bartender && state.bartenderPhase === "outcome" && (

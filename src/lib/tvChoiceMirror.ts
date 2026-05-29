@@ -1,4 +1,4 @@
-import { LOCATIONS, type Location } from "@/data/gameData";
+import { LOCATIONS, type BartenderDialogue, type Location } from "@/data/gameData";
 import type { ReadOnlyChoice } from "@/components/ReadOnlyChoiceCards";
 import type { GameState } from "@/state/gameStore";
 import { isHulajnogaLocked } from "@/lib/hulajnogaDisplay";
@@ -15,6 +15,16 @@ function locToChoice(loc: Location): ReadOnlyChoice {
     description: loc.description,
     icon: loc.icon ?? "📍",
   };
+}
+
+/** TV-safe mirror of bartender dialogue options (labels only — no outcome spoilers). */
+export function getBartenderDialogueChoices(
+  bartender: BartenderDialogue,
+): ReadOnlyChoice[] {
+  return bartender.options.map((opt) => ({
+    title: opt.label,
+    icon: "🍺",
+  }));
 }
 
 export function getPostBarChoices(state: GameState): ReadOnlyChoice[] {
