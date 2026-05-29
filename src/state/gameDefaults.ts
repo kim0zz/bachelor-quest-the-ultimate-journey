@@ -55,6 +55,7 @@ export function createInitialGameState() {
       | "hulajnoga-skip-narrator"
       | "hulajnoga-running"
       | "hulajnoga-result"
+      | "hulajnoga-skipped"
       | null,
     hulajnogaStartedAt: null as number | null,
     hulajnogaEndsAt: null as number | null,

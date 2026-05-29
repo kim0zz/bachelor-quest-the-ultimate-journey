@@ -20,6 +20,10 @@ import {
   getHulajnogaRemainingSeconds,
 } from "@/lib/hulajnogaDisplay";
 import { hulajnogaDebug } from "@/lib/hulajnogaDebug";
+import {
+  HULAJNOGA_SKIPPED_TEXT,
+  HULAJNOGA_SKIPPED_TITLE,
+} from "@/lib/hulajnogaParty";
 import { useGame, useTick } from "@/state/gameStore";
 
 const HULAJNOGA_OVERLAY_Z = "z-[100]";
@@ -70,6 +74,65 @@ function HulajnogaLockShell({
 }
 
 // ── TV ──────────────────────────────────────────────────────────
+
+function HulajnogaSkippedTvPanel() {
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className={`fixed inset-0 ${HULAJNOGA_OVERLAY_Z} flex items-center justify-center bg-black/80 backdrop-blur-md p-6`}
+      >
+        <motion.div
+          initial={{ scale: 0.85, y: 30 }}
+          animate={{ scale: 1, y: 0 }}
+          className="w-full max-w-5xl rounded-3xl border-2 border-slate-400 bg-gradient-to-br from-slate-900 to-slate-950 p-10 text-center shadow-[0_0_80px_rgba(148,163,184,0.35)]"
+        >
+          <div className="mb-4 text-6xl">🛴🚫</div>
+          <h2 className="text-4xl font-black uppercase tracking-wide text-slate-200">
+            {HULAJNOGA_SKIPPED_TITLE}
+          </h2>
+          <p className="mx-auto mt-6 max-w-3xl text-2xl leading-relaxed text-white/80">
+            {HULAJNOGA_SKIPPED_TEXT}
+          </p>
+          <p className="mt-8 text-lg text-white/50">Kontynuuj na kontrolerze 📱</p>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+function HulajnogaSkippedControllerPanel({ shell }: { shell?: boolean }) {
+  const { acknowledgeHulajnogaSkipped } = useGame();
+  const panel = (
+    <div className="space-y-6">
+      <div className="rounded-2xl border-2 border-slate-400/60 bg-black/50 p-5 text-center">
+        <div className="mb-3 text-4xl">🛴🚫</div>
+        <h3 className="text-xl font-black uppercase text-slate-200">{HULAJNOGA_SKIPPED_TITLE}</h3>
+        <p className="mt-3 text-base leading-snug text-white/85">{HULAJNOGA_SKIPPED_TEXT}</p>
+      </div>
+      <motion.button
+        type="button"
+        whileTap={{ scale: 0.97 }}
+        onClick={acknowledgeHulajnogaSkipped}
+        className="w-full rounded-2xl bg-fuchsia-600 p-6 text-2xl font-black uppercase"
+        style={{ touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}
+      >
+        DALEJ NA DZIAŁKĘ
+      </motion.button>
+    </div>
+  );
+
+  if (shell) {
+    return (
+      <HulajnogaLockShell phase="hulajnoga-skipped" clicks={0} result={null}>
+        {panel}
+      </HulajnogaLockShell>
+    );
+  }
+  return panel;
+}
 
 export function PreBitwyTransitionTv() {
   const { state } = useGame();
@@ -139,6 +202,10 @@ export function PostBitwyTransitionTv() {
 export function HulajnogaTv() {
   const { state } = useGame();
   useTick(50);
+
+  if (state.postDrewniakPhase === "hulajnoga-skipped") {
+    return <HulajnogaSkippedTvPanel />;
+  }
 
   if (state.postDrewniakPhase === "hulajnoga-choice") {
     return (
@@ -330,6 +397,10 @@ export function HulajnogaController({ exclusive = false }: { exclusive?: boolean
   const lastAcceptedTapAtRef = useRef(0);
   const dalejLockRef = useRef(false);
   const [dalejReady, setDalejReady] = useState(false);
+
+  if (state.postDrewniakPhase === "hulajnoga-skipped") {
+    return <HulajnogaSkippedControllerPanel shell={exclusive} />;
+  }
 
   const shellProps = {
     phase: state.postDrewniakPhase,

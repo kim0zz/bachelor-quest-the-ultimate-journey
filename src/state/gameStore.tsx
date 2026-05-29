@@ -41,6 +41,10 @@ import {
   isHulajnogaInputActive,
 } from "@/lib/hulajnogaDisplay";
 import { hulajnogaDebug } from "@/lib/hulajnogaDebug";
+import {
+  buildHulajnogaSkippedState,
+  normalizeStaleHulajnoga,
+} from "@/lib/hulajnogaParty";
 import { stripStalePourState } from "@/lib/pourGuard";
 import { computePourDisplayLevel } from "@/lib/pourLevel";
 import { createInitialGameState } from "@/state/gameDefaults";
@@ -52,6 +56,10 @@ import {
 export type { PourResult };
 export type { RealtimeStatus } from "@/state/useGameRoomSync";
 export { createInitialGameState };
+
+function hydrateGameState(raw: GameState): GameState {
+  return normalizeStaleHulajnoga(stripStalePourState(raw));
+}
 
 const POUR_TICK_MS = 50;
 
@@ -117,6 +125,7 @@ export type PostDrewniakPhase =
   | "hulajnoga-skip-narrator"
   | "hulajnoga-running"
   | "hulajnoga-result"
+  | "hulajnoga-skipped"
   | null;
 
 export type HulajnogaResult = "success" | "fail" | null;
@@ -435,6 +444,7 @@ interface Ctx {
   startHulajnoga: () => void;
   hulajnogaClick: () => void;
   acknowledgeHulajnogaResult: () => void;
+  acknowledgeHulajnogaSkipped: () => void;
   advanceDzialka: () => void;
   answerDzialkaRap: (index: number) => void;
   chooseDzialkaRoute: (route: "paryz" | "dom-zgon") => void;
@@ -448,7 +458,7 @@ interface Ctx {
 const GameCtx = createContext<Ctx | null>(null);
 
 export function GameProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<GameState>(() => stripStalePourState(load()));
+  const [state, setState] = useState<GameState>(() => hydrateGameState(load()));
   const [realtimeStatus, setRealtimeStatus] =
     useState<RealtimeStatus>("local-only");
   const { roomCode, pushStateNow } = useGameRoomSync(
@@ -474,7 +484,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     function onStorage(e: StorageEvent) {
       if (e.key !== STORAGE_KEY || !e.newValue || writingRef.current) return;
       try {
-        setState(stripStalePourState({ ...createInitialGameState(), ...JSON.parse(e.newValue) }));
+        setState(hydrateGameState({ ...createInitialGameState(), ...JSON.parse(e.newValue) }));
       } catch {
         /* noop */
       }
@@ -866,7 +876,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         };
       }
       if (s.postDrewniakPhase === "hulajnoga-skip-narrator") {
-        return routeToDzialka(s);
+        return routeToDzialka(s, true);
       }
       if (
         s.currentLocationId === "drewniak" &&
@@ -875,12 +885,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         !s.activeQuestId &&
         (s.status.kind === "correct" || s.status.kind === "groomDrinks")
       ) {
-        return {
-          ...s,
-          ...emptyPourState(),
-          postDrewniakPhase: "hulajnoga-choice",
-          status: { kind: "idle" as const, message: "CZY BIERZESZ HULAJNOGĘ?" },
-        };
+        return buildHulajnogaSkippedState(s);
       }
       if (
         s.activeQuestId === "dzialka" &&
@@ -1389,6 +1394,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(t);
   }, [state.postDrewniakPhase, state.hulajnogaEndsAt, state.hulajnogaResult]);
 
+  const acknowledgeHulajnogaSkipped = useCallback(() => {
+    if (!isControllerClient()) return;
+    setState((s) => {
+      if (s.postDrewniakPhase !== "hulajnoga-skipped") return s;
+      return routeToDzialka(s, true);
+    });
+  }, []);
+
   const acknowledgeHulajnogaResult = useCallback(() => {
     if (!isControllerClient()) return;
     setState((s) => {
@@ -1683,6 +1696,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     startHulajnoga,
     hulajnogaClick,
     acknowledgeHulajnogaResult,
+    acknowledgeHulajnogaSkipped,
     advanceDzialka,
     answerDzialkaRap,
     chooseDzialkaRoute,
