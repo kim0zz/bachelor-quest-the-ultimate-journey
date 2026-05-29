@@ -29,6 +29,7 @@ import {
   PRE_BITWY_ZUKER_LINE,
   PRE_BITWY_NARRATOR,
   evaluatePourLevel,
+  getSecretUnderBarShotConfirmText,
   getSecretUnderBarConfig,
   isShotPourLocation,
   type Location,
@@ -1054,6 +1055,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const required = secretUnderBarConfig.requiredShots;
       if (s.secretUnderBarShotsConfirmed >= required) return s;
       const next = s.secretUnderBarShotsConfirmed + 1;
+      const confirmMessage = getSecretUnderBarShotConfirmText(secretUnderBarConfig, next);
       return {
         ...s,
         shotCount: s.shotCount + 1,
@@ -1061,7 +1063,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         secretShotPulse: s.secretShotPulse + 1,
         status: {
           kind: "groomDrinks",
-          message: `SHOT ${next}/${required} POTWIERDZONY`,
+          message: confirmMessage,
         },
       };
     });

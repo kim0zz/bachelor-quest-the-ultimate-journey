@@ -1,6 +1,12 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import {
+  getSecretUnderBarShotConfirmText,
+  type PostQuestSecretUnderBar,
+} from "@/data/gameData";
 import { useGame } from "@/state/gameStore";
+import { ReadOnlyChoiceCards } from "@/components/ReadOnlyChoiceCards";
+import { getSecretOfferChoices } from "@/lib/tvChoiceMirror";
 
 function TrapImage({ src, alt }: { src: string; alt: string }) {
   const [failed, setFailed] = useState(false);
@@ -57,23 +63,49 @@ function TrapImage({ src, alt }: { src: string; alt: string }) {
   );
 }
 
+function SecretOfferMichuCopy({ config }: { config: PostQuestSecretUnderBar }) {
+  if (!config.offerMichuIntro && !config.offerMichuLine && !config.offerNarratorLine) {
+    return null;
+  }
+
+  return (
+    <div className="mx-auto mt-6 max-w-3xl space-y-4 text-left">
+      {config.offerMichuIntro && (
+        <p className="text-lg leading-relaxed text-white/85 md:text-xl">{config.offerMichuIntro}</p>
+      )}
+      {config.offerMichuLine && (
+        <p className="rounded-2xl border border-amber-400/40 bg-amber-950/30 p-4 text-lg italic text-white/90 md:text-xl">
+          Michu: „{config.offerMichuLine}"
+        </p>
+      )}
+      {config.offerNarratorLine && (
+        <p className="text-sm italic text-fuchsia-200/90 md:text-base">{config.offerNarratorLine}</p>
+      )}
+    </div>
+  );
+}
+
 function ShotBurstTv({
   pulse,
   required,
+  confirmText,
 }: {
   pulse: number;
   required: number;
+  confirmText?: string;
 }) {
   const [show, setShow] = useState(false);
   const [label, setLabel] = useState("");
 
   useEffect(() => {
     if (pulse <= 0) return;
-    setLabel(`SHOT ${pulse}/${required} POTWIERDZONY`);
+    setLabel(
+      confirmText ?? `SHOT ${pulse}/${required} POTWIERDZONY`,
+    );
     setShow(true);
     const t = setTimeout(() => setShow(false), 2200);
     return () => clearTimeout(t);
-  }, [pulse, required]);
+  }, [pulse, required, confirmText]);
 
   return (
     <AnimatePresence>
@@ -95,7 +127,11 @@ function ShotBurstTv({
             className="rounded-3xl border-4 border-amber-300 bg-gradient-to-br from-rose-600 to-amber-500 px-12 py-10 text-center shadow-[0_0_100px_rgba(251,191,36,0.8)]"
           >
             <div className="text-8xl">🥃🍻</div>
-            <div className="mt-4 text-5xl font-black uppercase tracking-tight text-white">
+            <div
+              className={`mt-4 font-black text-white ${
+                confirmText ? "text-2xl leading-snug md:text-3xl" : "text-5xl uppercase tracking-tight"
+              }`}
+            >
               {label}
             </div>
           </motion.div>
@@ -108,9 +144,11 @@ function ShotBurstTv({
 function ShotBurstController({
   pulse,
   required,
+  confirmText,
 }: {
   pulse: number;
   required: number;
+  confirmText?: string;
 }) {
   const [show, setShow] = useState(false);
 
@@ -120,6 +158,9 @@ function ShotBurstController({
     const t = setTimeout(() => setShow(false), 1800);
     return () => clearTimeout(t);
   }, [pulse]);
+
+  const label =
+    confirmText ?? `SHOT ${pulse}/${required} POTWIERDZONY`;
 
   return (
     <AnimatePresence>
@@ -136,8 +177,12 @@ function ShotBurstController({
           className="rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-rose-600 to-amber-500 p-6 text-center shadow-lg"
         >
           <div className="text-4xl">🥃</div>
-          <div className="mt-2 text-2xl font-black uppercase">
-            SHOT {pulse}/{required} POTWIERDZONY
+          <div
+            className={`mt-2 font-black ${
+              confirmText ? "text-base leading-snug" : "text-2xl uppercase"
+            }`}
+          >
+            {label}
           </div>
         </motion.div>
       )}
@@ -155,10 +200,18 @@ export function SecretUnderBarTv() {
     required > 0
       ? Math.min(100, (state.secretUnderBarShotsConfirmed / required) * 100)
       : 0;
+  const shotBurstLabel =
+    state.secretShotPulse > 0
+      ? getSecretUnderBarShotConfirmText(secretUnderBarConfig, state.secretShotPulse)
+      : undefined;
 
   return (
     <>
-      <ShotBurstTv pulse={state.secretShotPulse} required={required} />
+      <ShotBurstTv
+        pulse={state.secretShotPulse}
+        required={required}
+        confirmText={shotBurstLabel}
+      />
       <AnimatePresence>
         {phase === "offer" && (
           <motion.div
@@ -178,9 +231,12 @@ export function SecretUnderBarTv() {
               <h2 className="mt-4 text-4xl font-black leading-tight text-white md:text-5xl">
                 {secretUnderBarConfig.offerTitle}
               </h2>
-              <p className="mt-6 text-xl text-white/60">
-                Wybierz na kontrolerze 📱
-              </p>
+              <SecretOfferMichuCopy config={secretUnderBarConfig} />
+              <div className="mx-auto mt-8 max-w-4xl">
+                <ReadOnlyChoiceCards
+                  choices={getSecretOfferChoices(secretUnderBarConfig.offerTitle)}
+                />
+              </div>
             </motion.div>
           </motion.div>
         )}
@@ -277,10 +333,18 @@ export function SecretUnderBarController() {
   const required = secretUnderBarConfig.requiredShots;
   const shotsDone = state.secretUnderBarShotsConfirmed;
   const canEnter = shotsDone >= required;
+  const shotBurstLabel =
+    state.secretShotPulse > 0
+      ? getSecretUnderBarShotConfirmText(secretUnderBarConfig, state.secretShotPulse)
+      : undefined;
 
   return (
     <div className="space-y-3">
-      <ShotBurstController pulse={state.secretShotPulse} required={required} />
+      <ShotBurstController
+        pulse={state.secretShotPulse}
+        required={required}
+        confirmText={shotBurstLabel}
+      />
 
       {phase === "offer" && (
         <>
@@ -288,6 +352,7 @@ export function SecretUnderBarController() {
             <p className="text-lg font-bold leading-snug">
               {secretUnderBarConfig.offerTitle}
             </p>
+            <SecretOfferMichuCopy config={secretUnderBarConfig} />
           </div>
           <motion.button
             whileTap={{ scale: 0.97 }}

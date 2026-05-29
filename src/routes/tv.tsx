@@ -12,6 +12,10 @@ import { PreBitwyTransitionTv, PostBitwyTransitionTv, HulajnogaTv } from "@/comp
 import { DzialkaTv } from "@/components/Dzialka";
 import { ParyzTv } from "@/components/Paryz";
 import { RealtimeIndicator } from "@/components/RealtimeIndicator";
+import { MapPreviewToggle } from "@/components/MapPreviewToggle";
+import { TvChoiceMirroring } from "@/components/TvChoiceMirroring";
+import { ReadOnlyChoiceCards } from "@/components/ReadOnlyChoiceCards";
+import { getPostBarChoices } from "@/lib/tvChoiceMirror";
 
 export const Route = createFileRoute("/tv")({
   head: () => ({
@@ -45,9 +49,9 @@ function PostBarOverlay() {
           <p className="mt-4 mx-auto max-w-3xl text-2xl leading-relaxed text-white/90">
             {state.status.message}
           </p>
-          <p className="mt-8 text-lg text-white/50">
-            Wybierz na kontrolerze 📱
-          </p>
+          <div className="mx-auto mt-8 max-w-4xl">
+            <ReadOnlyChoiceCards title="CO DALEJ?" choices={getPostBarChoices(state)} />
+          </div>
         </motion.div>
       </motion.div>
     </AnimatePresence>
@@ -127,6 +131,7 @@ function TvInner() {
   return (
     <div className="relative min-h-screen overflow-hidden bg-slate-950 p-6 text-white">
       <RealtimeIndicator status={realtimeStatus} roomCode={roomCode} />
+      <MapPreviewToggle className="fixed bottom-6 right-6 z-50" />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(217,70,239,0.25),_transparent_60%),radial-gradient(ellipse_at_bottom_right,_rgba(34,211,238,0.2),_transparent_60%)]" />
       <header className="relative z-10 flex items-center justify-between">
         <div>
@@ -162,6 +167,7 @@ function TvInner() {
       <PostBarOverlay />
       <PekinBarOverlay />
       <PekinTransitionOverlay />
+      <TvChoiceMirroring />
       {state.finalShown && <FinalVerdict />}
     </div>
   );

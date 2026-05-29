@@ -12,6 +12,8 @@ import {
 } from "@/data/gameData";
 import { ShotPourMinigameTv, ShotPourMinigameController } from "@/components/ShotPourMinigame";
 import { useGame, useTick } from "@/state/gameStore";
+import { ReadOnlyChoiceCards } from "@/components/ReadOnlyChoiceCards";
+import { getBitwyIntroChoices } from "@/lib/tvChoiceMirror";
 
 function getBalancePos(startTime: number): number {
   const elapsed = Date.now() - startTime;
@@ -87,7 +89,9 @@ function BitwyIntroTv() {
           &quot;Lama, kurwa, chodź do kuchni na chwilę. Pokój Bewicza nie ucieknie.&quot;
         </p>
       </div>
-      <p className="mt-8 text-lg text-white/50">Wybierz na kontrolerze 📱</p>
+      <div className="mx-auto mt-8 max-w-4xl">
+        <ReadOnlyChoiceCards title="BITWY — wybór" choices={getBitwyIntroChoices()} />
+      </div>
     </TvCard>
   );
 }

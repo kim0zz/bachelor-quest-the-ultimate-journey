@@ -11,6 +11,7 @@ import { ParyzController } from "./Paryz";
 import { isShotPourLocation, VERDICTS } from "@/data/gameData";
 import { isHulajnogaInputActive, isHulajnogaLocked } from "@/lib/hulajnogaDisplay";
 import { shouldShowPourUi } from "@/lib/pourGuard";
+import { MapPreviewToggle } from "@/components/MapPreviewToggle";
 
 export function ControllerView() {
   const {
@@ -143,13 +144,16 @@ export function ControllerView() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-purple-950 to-slate-950 p-5 text-white">
-      <header className="flex items-center justify-between">
+      <header className="flex items-center justify-between gap-2">
         <GroomAvatar size={56} />
-        <div className="text-right">
-          <div className="text-xs uppercase tracking-widest text-fuchsia-300">
-            Kontroler
+        <div className="flex flex-1 flex-col items-end gap-2">
+          <div className="text-right">
+            <div className="text-xs uppercase tracking-widest text-fuchsia-300">
+              Kontroler
+            </div>
+            <div className="text-lg font-bold">Lama 🦙</div>
           </div>
-          <div className="text-lg font-bold">Lama 🦙</div>
+          <MapPreviewToggle />
         </div>
       </header>
 

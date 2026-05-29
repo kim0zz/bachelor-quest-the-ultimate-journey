@@ -20,6 +20,11 @@ export interface PostQuestSecretUnderBar {
   imageUrl: string;
   title: string;
   offerTitle: string;
+  offerMichuIntro?: string;
+  offerMichuLine?: string;
+  offerNarratorLine?: string;
+  shot1ConfirmText?: string;
+  shot2ConfirmText?: string;
   enterText: string;
   revealTitle: string;
   revealText: string;
@@ -59,6 +64,15 @@ export interface Location {
   underPenaltyText?: string;
   overPenaltyText?: string;
   bartenderDialogue?: BartenderDialogue;
+}
+
+export function getSecretUnderBarShotConfirmText(
+  config: PostQuestSecretUnderBar,
+  shotNumber: number,
+): string {
+  if (shotNumber === 1 && config.shot1ConfirmText) return config.shot1ConfirmText;
+  if (shotNumber === 2 && config.shot2ConfirmText) return config.shot2ConfirmText;
+  return `SHOT ${shotNumber}/${config.requiredShots} POTWIERDZONY`;
 }
 
 export function evaluatePourLevel(
@@ -228,8 +242,20 @@ export const LOCATIONS: Location[] = [
       requiredShots: 2,
       imageUrl: "/assets/groom-drunk-trap.jpg",
       title: "SEKRET POD BAREM",
-      offerTitle: "Ktoś mówi, że pod barem w Małym Piwku jest coś, czego regulamin nie przewidział.",
-      enterText: "Lama schyla się pod ladę. Dwa prawdziwe shoty — potem zobaczymy, czy to był dobry pomysł.",
+      offerTitle:
+        "Ktoś mówi, że pod barem w Małym Piwku jest coś, czego regulamin nie przewidział.",
+      offerMichuIntro:
+        "Michu pojawia się przy barze z miną człowieka, który właśnie znalazł najgorszy możliwy pomysł i chce go natychmiast wdrożyć.",
+      offerMichuLine:
+        "Michu patrzy na Lamę i mówi, że jak już jesteśmy w Małym Piwku, to bez dwóch szybkich pod barem się nie liczy.",
+      offerNarratorLine:
+        "System wykrył wpływ Micha. Ryzyko głupiej decyzji wzrosło o 300%.",
+      shot1ConfirmText:
+        "Michu zatwierdza pierwszego. Procedura degeneracji rozpoczęta.",
+      shot2ConfirmText:
+        "Michu zatwierdza drugiego. Od tej decyzji nie ma odwołania.",
+      enterText:
+        "Lama schyla się pod ladę. Dwa prawdziwe shoty — potem zobaczymy, czy to był dobry pomysł.",
       revealTitle: "PUŁAPKA!",
       revealText: "NAKURWIŁEŚ SIĘ NA DARMO",
     },
@@ -320,7 +346,7 @@ export const LOCATIONS: Location[] = [
     name: "DREWNIAK",
     shortName: "DREWNIAK",
     description:
-      "Misja zaopatrzeniowa. Lama musi udowodnić, że potrafi kupić rzeczy potrzebne do dalszego niszczenia organizmu.",
+      "Misja zaopatrzeniowa przed działką. W DREWNIAKU Lama spotyka Johny'ego, który wygląda jak człowiek po trzech decyzjach i przed czwartą. Johny: „Lama, nie kombinuj. Czteropak Harnolda i flacha. Jak bierzesz włoszczyznę, to ja wysiadam z tej fabuły.”",
     x: 58,
     y: 38,
     type: "quiz",
@@ -328,9 +354,9 @@ export const LOCATIONS: Location[] = [
     icon: "🛒",
     pointsForSuccess: 10,
     rewardText:
-      "Lama wykazał się myśleniem strategicznym. Czteropak to dywersyfikacja, flacha to plan awaryjny. Tak działa odpowiedzialny logistyk weselny.",
+      "Johny kiwa głową. To nie była dobra decyzja życiowo, ale była poprawna logistycznie. Czteropak to dywersyfikacja, flacha to plan awaryjny. +10 Mąż Points.",
     penaltyText:
-      "DREWNIAK odmawia autoryzacji tych zakupów. To nie jest piknik, detoks ani rosół u babci. Lama pije za brak misji.",
+      "Johny patrzy na zakupy i milknie. To najgorszy rodzaj ciszy — cisza człowieka, który stracił wiarę w melanż. Lama pije za brak misji.",
     question: "Co Lama kupuje w DREWNIAKU przed działką?",
     answers: [
       "Czteropak Harnolda i flachę",

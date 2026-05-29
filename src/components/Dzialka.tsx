@@ -11,6 +11,8 @@ import {
 } from "@/data/gameData";
 import { isHulajnogaLocked } from "@/lib/hulajnogaDisplay";
 import { useGame } from "@/state/gameStore";
+import { ReadOnlyChoiceCards } from "@/components/ReadOnlyChoiceCards";
+import { getDzialkaFinalChoices } from "@/lib/tvChoiceMirror";
 
 function TvCard({
   children,
@@ -138,7 +140,9 @@ export function DzialkaTv() {
             <div className="text-6xl mb-4">🗺️</div>
             <p className="mx-auto max-w-3xl text-2xl text-white/90">{DZIALKA_FINAL_NARRATOR1}</p>
             <p className="mx-auto mt-6 max-w-3xl text-xl text-white/70">{DZIALKA_FINAL_NARRATOR2}</p>
-            <p className="mt-8 text-lg text-white/50">Wybierz na kontrolerze 📱</p>
+            <div className="mx-auto mt-8 max-w-4xl">
+              <ReadOnlyChoiceCards choices={getDzialkaFinalChoices()} />
+            </div>
           </TvCard>
         )}
       </motion.div>
