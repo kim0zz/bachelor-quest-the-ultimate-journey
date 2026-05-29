@@ -2,6 +2,8 @@ import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { GROOM } from "@/data/gameData";
+import { shouldShowPourUi } from "@/lib/pourGuard";
+import { isHulajnogaLocked } from "@/lib/hulajnogaDisplay";
 import {
   BALANCE_PERIOD_MS,
   BALANCE_TARGET_MIN,
@@ -23,6 +25,7 @@ export function BitwyTv() {
   const { state } = useGame();
   const loc = LOCATIONS.find((l) => l.id === "bitwy")!;
   if (state.activeQuestId !== "bitwy" || !state.bitwyPhase) return null;
+  if (isHulajnogaLocked(state.postDrewniakPhase)) return null;
 
   return (
     <AnimatePresence>
@@ -176,6 +179,7 @@ function BitwySalonNarratorTv() {
 
 function BitwyShotPourTv({ loc }: { loc: typeof LOCATIONS[number] }) {
   const { state } = useGame();
+  if (!shouldShowPourUi(state)) return null;
   const isFeedback = state.status.kind === "correct" || state.status.kind === "groomDrinks";
   if (isFeedback) return null;
   return (

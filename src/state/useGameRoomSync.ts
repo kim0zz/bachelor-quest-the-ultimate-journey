@@ -10,6 +10,7 @@ import { isHulajnogaInputActive } from "@/lib/hulajnogaDisplay";
 import { hulajnogaDebug } from "@/lib/hulajnogaDebug";
 import { getClientId, getRoomCode } from "@/lib/gameRoom";
 import { getSupabase } from "@/lib/supabase";
+import { stripStalePourState } from "@/lib/pourGuard";
 import { createInitialGameState } from "@/state/gameDefaults";
 import type { GameState } from "@/state/gameStore";
 
@@ -104,7 +105,7 @@ export function useGameRoomSync(
       }
 
       const local = stateRef.current;
-      let nextRemote = remote;
+      let nextRemote = stripStalePourState(remote);
 
       if (isControllerClient() && isHulajnogaInputActive(local.postDrewniakPhase)) {
         const remoteActive = isHulajnogaInputActive(remote.postDrewniakPhase);

@@ -10,6 +10,7 @@ import { DzialkaController } from "./Dzialka";
 import { ParyzController } from "./Paryz";
 import { isShotPourLocation, VERDICTS } from "@/data/gameData";
 import { isHulajnogaInputActive, isHulajnogaLocked } from "@/lib/hulajnogaDisplay";
+import { shouldShowPourUi } from "@/lib/pourGuard";
 
 export function ControllerView() {
   const {
@@ -101,13 +102,13 @@ export function ControllerView() {
     [...VERDICTS].reverse().find((v) => state.manPoints >= v.minPoints) ??
     VERDICTS[0];
 
-  if (isHulajnogaInputActive(state.postDrewniakPhase)) {
+  if (isHulajnogaLocked(state.postDrewniakPhase)) {
     return (
       <div
         className="min-h-screen bg-slate-950 text-white"
         style={{ touchAction: "manipulation", userSelect: "none" }}
       >
-        <HulajnogaController exclusive />
+        <HulajnogaController exclusive={isHulajnogaInputActive(state.postDrewniakPhase)} />
       </div>
     );
   }
@@ -427,7 +428,7 @@ export function ControllerView() {
               </div>
             )}
 
-            {!inBartender && activeQuest && isShotPourLocation(activeQuest) && (
+            {!inBartender && activeQuest && isShotPourLocation(activeQuest) && shouldShowPourUi(state) && (
               <ShotPourMinigameController loc={activeQuest} />
             )}
 

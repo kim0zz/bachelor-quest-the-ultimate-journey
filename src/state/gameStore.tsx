@@ -41,6 +41,7 @@ import {
   isHulajnogaInputActive,
 } from "@/lib/hulajnogaDisplay";
 import { hulajnogaDebug } from "@/lib/hulajnogaDebug";
+import { stripStalePourState } from "@/lib/pourGuard";
 import { computePourDisplayLevel } from "@/lib/pourLevel";
 import { createInitialGameState } from "@/state/gameDefaults";
 import {
@@ -447,7 +448,7 @@ interface Ctx {
 const GameCtx = createContext<Ctx | null>(null);
 
 export function GameProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<GameState>(() => load());
+  const [state, setState] = useState<GameState>(() => stripStalePourState(load()));
   const [realtimeStatus, setRealtimeStatus] =
     useState<RealtimeStatus>("local-only");
   const { roomCode, pushStateNow } = useGameRoomSync(
@@ -473,7 +474,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     function onStorage(e: StorageEvent) {
       if (e.key !== STORAGE_KEY || !e.newValue || writingRef.current) return;
       try {
-        setState({ ...createInitialGameState(), ...JSON.parse(e.newValue) });
+        setState(stripStalePourState({ ...createInitialGameState(), ...JSON.parse(e.newValue) }));
       } catch {
         /* noop */
       }
@@ -795,6 +796,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
           (s.status.kind === "correct" || s.status.kind === "groomDrinks")) {
         return {
           ...s,
+          ...emptyPourState(),
           bitwyPhase: "balance-intro" as BitwyPhase,
           status: {
             kind: "idle" as const,
@@ -875,6 +877,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       ) {
         return {
           ...s,
+          ...emptyPourState(),
           postDrewniakPhase: "hulajnoga-choice",
           status: { kind: "idle" as const, message: "CZY BIERZESZ HULAJNOGĘ?" },
         };
@@ -1307,6 +1310,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       if (s.postDrewniakPhase !== "hulajnoga-choice") return s;
       return {
         ...s,
+        ...emptyPourState(),
         postDrewniakPhase: "hulajnoga-skip-narrator",
         status: {
           kind: "idle" as const,

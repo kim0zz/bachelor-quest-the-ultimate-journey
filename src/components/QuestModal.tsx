@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { isShotPourLocation } from "@/data/gameData";
+import { shouldShowPourUi } from "@/lib/pourGuard";
 import { ShotPourMinigameTv } from "@/components/ShotPourMinigame";
 import { useGame, useTick } from "@/state/gameStore";
 
@@ -132,7 +133,9 @@ export function QuestModal() {
                   </p>
                 </>
               )}
-              {isShotPourLocation(activeQuest) && !inBartender && (
+              {isShotPourLocation(activeQuest) &&
+                !inBartender &&
+                shouldShowPourUi(state) && (
                 <ShotPourMinigameTv loc={activeQuest} />
               )}
               {activeQuest.type === "minigame" &&

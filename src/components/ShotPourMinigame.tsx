@@ -4,6 +4,7 @@ import confetti from "canvas-confetti";
 import type { Location } from "@/data/gameData";
 import { ShotGlassVisual } from "@/components/ShotGlassVisual";
 import { computePourDisplayLevel } from "@/lib/pourLevel";
+import { shouldShowPourUi } from "@/lib/pourGuard";
 import { useGame, useTick } from "@/state/gameStore";
 
 function resultSubtext(loc: Location, result: "success" | "under" | "over") {
@@ -18,22 +19,23 @@ function resultTitle(loc: Location, result: "success" | "under" | "over") {
   return loc.overTitle ?? "PRZELANE!";
 }
 
+function clampLevel(level: number): number {
+  return Math.max(0, Math.min(100, level));
+}
+
 export function ShotPourMinigameTv({ loc }: { loc: Location }) {
   const { state } = useGame();
-  useTick(50);
 
-  const targetMin = loc.targetMin ?? 80;
-  const targetMax = loc.targetMax ?? 95;
-  const fillSpeed = loc.fillSpeed ?? 45;
+  if (!shouldShowPourUi(state)) return null;
+
   const frozen = state.pourEvaluated;
   const result = state.pourResult;
-  const displayLevel = computePourDisplayLevel(
-    state.pourStartedAt,
-    state.pourIsPouring,
-    state.pourEvaluated,
-    state.pourLevel,
-    fillSpeed,
-  );
+  const waitingForPour =
+    !frozen && (state.pourIsPouring || !result);
+
+  const finalLevel = frozen
+    ? clampLevel(state.pourLevel)
+    : 0;
 
   useEffect(() => {
     if (!frozen || result !== "success") return;
@@ -45,33 +47,46 @@ export function ShotPourMinigameTv({ loc }: { loc: Location }) {
     });
   }, [frozen, result]);
 
+  if (waitingForPour) {
+    return (
+      <div className="text-center">
+        <p className="mx-auto max-w-2xl text-lg text-white/70">{loc.introText}</p>
+        <div className="mx-auto mt-10 max-w-3xl rounded-2xl border-2 border-amber-400/60 bg-amber-950/30 px-8 py-10">
+          <p className="text-5xl font-black uppercase tracking-wide text-amber-200">
+            LAMA LEJE SHOTA
+          </p>
+          <p className="mt-6 text-2xl text-white/90">
+            Patrzymy na kontroler. Czekamy na wynik nalewania.
+          </p>
+          <p className="mt-4 text-base italic text-white/50">
+            TV nie liczy procentów, żeby nie odpalić matematyki po alkoholu.
+          </p>
+        </div>
+        <p className="mt-8 text-xl text-fuchsia-200 animate-pulse">
+          LEJ na kontrolerze 📱
+        </p>
+      </div>
+    );
+  }
+
+  const targetMin = loc.targetMin ?? 80;
+  const targetMax = loc.targetMax ?? 95;
+
   return (
     <div className="text-center">
       <p className="mx-auto max-w-2xl text-lg text-white/70">{loc.introText}</p>
 
       <div className="mt-8 flex justify-center">
         <ShotGlassVisual
-          level={displayLevel}
+          level={finalLevel}
           targetMin={targetMin}
           targetMax={targetMax}
-          isPouring={state.pourIsPouring && !frozen}
-          frozen={frozen}
+          isPouring={false}
+          frozen={true}
           result={result}
           variant="tv"
         />
       </div>
-
-      <p className="mt-4 text-sm uppercase tracking-widest text-emerald-400/80">
-        Zielona strefa: {targetMin}% – {targetMax}%
-      </p>
-
-      {!frozen && (
-        <p className="mt-4 text-xl text-fuchsia-200 animate-pulse">
-          {state.pourIsPouring
-            ? "LEJE… przytrzymaj LEJ na kontrolerze 📱"
-            : "Czekam na LEJ…"}
-        </p>
-      )}
 
       {frozen && result && (
         <motion.div
